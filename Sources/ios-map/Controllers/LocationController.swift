@@ -45,15 +45,9 @@ class LocationController: ILocation, LocationProvider {
     }
     
     public func updateUserDirection(newDirection: Double) {
-        
-        print("updateUserDirection-------")
         let heading = TT2CLHeading(heading: newDirection)
-        print(heading)
-        let new = heading.update(heading: newDirection)
-        print("new")
-        print(new)
-       // print(new.trueHeading)
-        delegate?.locationProvider(self, didUpdateHeading: new)
+        heading.update(heading: newDirection)
+        delegate?.locationProvider(self, didUpdateHeading: heading)
     }
     
     public func reset() { }

@@ -20,7 +20,7 @@ class TT2CLHeading: CLHeading {
         }
         
         set {
-            Logger.init().log(message: "setter invoked magneticHeading \(newValue)")
+            print("setter invoked magneticHeading \(newValue)")
         }
     }
     
@@ -31,7 +31,7 @@ class TT2CLHeading: CLHeading {
         }
         
         set {
-            Logger.init().log(message: "setter invoked trueHeading \(newValue)")
+            print("setter invoked trueHeading \(newValue)")
         }
     }
     
@@ -42,7 +42,7 @@ class TT2CLHeading: CLHeading {
         }
         
         set {
-            Logger.init().log(message: "setter invoked headingAccuracy \(newValue)")
+            print("setter invoked headingAccuracy \(newValue)")
         }
     }
     
@@ -53,7 +53,7 @@ class TT2CLHeading: CLHeading {
         }
         
         set {
-            Logger.init().log(message: "setter invoked timestamp \(newValue)")
+            print("setter invoked timestamp \(newValue)")
         }
     }
 
@@ -63,13 +63,11 @@ class TT2CLHeading: CLHeading {
         super.init()
     }
     
-    func update(heading: Double) -> TT2CLHeading {
+    func update(heading: Double) {
         self.magneticHeading = heading
         self.headingAccuracy = 1.0
         self.timestamp = Date()
         self.trueHeading = heading
-        
-        return self
     }
 
     required init?(coder: NSCoder) {
