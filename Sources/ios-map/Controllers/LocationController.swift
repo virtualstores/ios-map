@@ -32,21 +32,22 @@ class LocationController: ILocation, LocationProvider {
     }
     
     // MARK: ILocation implementation
-    public func updateUserLocation(newLocation: CGPoint, std: Float?) {
+    public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Float?) {
         guard let std = std else { return }
         
         // The CGPoint here is converted to LatLng, where x = lat, y = lng
-        let coordinate2D = CLLocationCoordinate2D(latitude: newLocation.x, longitude:  newLocation.y)
         let accuracy = CLLocationAccuracy(Float(std * 1.645))
         
-        let location = CLLocation(coordinate: coordinate2D, altitude: 1.0, horizontalAccuracy: accuracy, verticalAccuracy: 1.0, timestamp: Date())
+        let location = CLLocation(coordinate: newLocation, altitude: 1.0, horizontalAccuracy: 3000 * accuracy, verticalAccuracy: 1.0, timestamp: Date())
         
         delegate?.locationProvider(self, didUpdateLocations: [location])
     }
     
     public func updateUserDirection(newDirection: Double) {
-        let heading = TT2CLHeading(heading: newDirection)
-        heading.update(heading: newDirection)
+        let heading = TT2CLHeading()
+        heading._trueHeading = newDirection
+        heading._magneticHeading = newDirection
+        self.heading = heading
         delegate?.locationProvider(self, didUpdateHeading: heading)
     }
     
@@ -59,7 +60,11 @@ class LocationController: ILocation, LocationProvider {
     
     public func requestAlwaysAuthorization() { }
     
-    public func requestWhenInUseAuthorization() { }
+    public func requestWhenInUseAuthorization() {
+        authorizationStatus = .notDetermined
+        accuracyAuthorization = .fullAccuracy
+        delegate?.locationProviderDidChangeAuthorization(self)
+    }
     
     public func requestTemporaryFullAccuracyAuthorization(withPurposeKey purposeKey: String) { }
     
@@ -67,18 +72,14 @@ class LocationController: ILocation, LocationProvider {
     
     public func stopUpdatingLocation() { }
     
-    public func startUpdatingHeading() {
-        
-    }
+    public func startUpdatingHeading() {}
     
     public func stopUpdatingHeading() { }
     
     public func dismissHeadingCalibrationDisplay() { }
     
-    //MARK: Private helpers
-    private func createOptions() {
-        locationProviderOptions.activityType = .other
-        locationProviderOptions.puckType = .puck2D()
+    func setOptions(options: LocationOptions) {
+        self.locationProviderOptions = options
     }
 }
 

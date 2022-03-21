@@ -45,10 +45,8 @@ class CameraController: ICameraController {
         try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds,  minZoom: 0.0))
     }
     
-    public func updateLocation(with newLocation: CGPoint, direction: Double) {
-        let location = CLLocationCoordinate2D(latitude: newLocation.x, longitude: newLocation.y)
-        
-        actualCameraMode?.onLocationUpdated(newLocation: location, direction: direction)
+    public func updateLocation(with newLocation: CLLocationCoordinate2D, direction: Double) {
+        actualCameraMode?.onLocationUpdated(newLocation: newLocation, direction: direction)
     }
     
     public func updateCameraMode(with mode: CameraModes) {

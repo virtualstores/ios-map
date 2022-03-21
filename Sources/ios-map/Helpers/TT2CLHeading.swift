@@ -7,16 +7,17 @@
 
 import Foundation
 import CoreLocation
-@_implementationOnly import MapboxMaps
+import MapboxMaps
 import VSFoundation
 
 class TT2CLHeading: CLHeading {
-    let heading: Double
+    var _magneticHeading: CLLocationDirection?
+    var _trueHeading: CLLocationDirection?
 
     open override var magneticHeading: CLLocationDirection {
         get {
             Logger.init().log(message: "getter invoked magneticHeading")
-            return heading
+            return _magneticHeading ?? 0.0
         }
         
         set {
@@ -27,7 +28,7 @@ class TT2CLHeading: CLHeading {
     open override var trueHeading: CLLocationDirection {
         get {
             Logger.init().log(message: "getter invoked trueHeading")
-            return heading
+            return _trueHeading ?? 0.0
         }
         
         set {
@@ -55,23 +56,6 @@ class TT2CLHeading: CLHeading {
         set {
             print("setter invoked timestamp \(newValue)")
         }
-    }
-
-    init(heading: Double) {
-        print("init heading")
-        self.heading = heading
-        super.init()
-    }
-    
-    func update(heading: Double) {
-        self.magneticHeading = heading
-        self.headingAccuracy = 1.0
-        self.timestamp = Date()
-        self.trueHeading = heading
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 }
 

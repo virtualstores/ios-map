@@ -69,17 +69,22 @@ public class BaseMapController: IMapController {
         
         mapViewContainer.mapBoxMapView.location.overrideLocationProvider(with: location)
         mapViewContainer.mapBoxMapView.location.locationProvider.startUpdatingLocation()
-        mapViewContainer.mapBoxMapView.location.options.puckType = .puck2D(Puck2DConfiguration(topImage: UIImage(systemName: "location.north.circle.fill"), bearingImage: nil, shadowImage: nil, scale: nil, showsAccuracyRing: false))
-        
+        mapViewContainer.mapBoxMapView.location.locationProvider.startUpdatingHeading()
+        mapViewContainer.mapBoxMapView.location.options.activityType = .other
+        mapViewContainer.mapBoxMapView.location.options.puckBearingSource = .heading
+                
         let image = mapData?.style.userMarkerImage
         
         if let userMarkerImage = image {
-            let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)
             
+            let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)
             mapViewContainer.mapBoxMapView.location.options.puckType = .puck2D(config)
         } else {
             mapViewContainer.mapBoxMapView.location.options.puckType = .puck2D()
         }
+        
+        internalLocation?.setOptions(options: mapViewContainer.mapBoxMapView.location.options)
+
     }
     
     private func setupCamera(with mode: CameraModes) {
