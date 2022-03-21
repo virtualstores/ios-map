@@ -54,12 +54,14 @@ public class BaseMapController: IMapController {
         guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
 
         mapViewContainer.mapStyle = mapData.style
+        mapViewContainer.addLoadingView()
         mapViewContainer.mapView.mapboxMap.loadStyleURI(styleURI) { [weak self] result in
             switch result {
             case .success(let style):
                 self?.currentStyle = style
                 self?.onStyleLoaded()
                 self?.setupCamera(with: .free)
+                self?.mapViewContainer.dismissLoadingScreen()
             case let .failure(error):
                 Logger.init(verbosity: .debug).log(message: "The map failed to load the style: \(error)")
             }
@@ -67,7 +69,10 @@ public class BaseMapController: IMapController {
     }
 
     public func start() {
-      setupUserMarker()
+        mapViewContainer.addLoadingView()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.setupUserMarker()
+        }
     }
 
     private func onStyleLoaded() {
@@ -93,6 +98,10 @@ public class BaseMapController: IMapController {
               mapViewContainer.mapView.location.options.puckType = .puck2D(config)
           } else {
               mapViewContainer.mapView.location.options.puckType = .puck2D()
+          }
+
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+              self.mapViewContainer.dismissLoadingScreen()
           }
       }
 
@@ -133,9 +142,15 @@ public class BaseMapController: IMapController {
     }
 
     public func stop() {
-        mapViewContainer.mapView.location.options.puckType = .none
-        mapViewContainer.mapView.location.locationProvider.stopUpdatingLocation()
-        mapViewContainer.mapView.location.locationProvider.stopUpdatingHeading()
+        mapViewContainer.addLoadingView()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.mapViewContainer.mapView.location.options.puckType = .none
+            self.mapViewContainer.mapView.location.locationProvider.stopUpdatingLocation()
+            self.mapViewContainer.mapView.location.locationProvider.stopUpdatingHeading()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.mapViewContainer.dismissLoadingScreen()
+            }
+        }
     }
 
     public func reset() { }

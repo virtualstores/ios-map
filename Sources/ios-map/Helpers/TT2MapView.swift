@@ -48,29 +48,53 @@ public class TT2MapView: UIView {
         }
     }
 
-//    private func createLoadingActivityIndicator() {
-//        self.loadingIndicator.startAnimating()
-//
-//        switch mapOptions.style.styleMode {
-//        case .light:
-//            if #available(iOS 13.0, *) {
-//                self.loadingView.backgroundColor = .secondarySystemBackground
-//                loadingIndicator.style = .large
-//            } else {
-//                self.loadingView.backgroundColor = .lightGray
-//            }
-//        case .dark:
-//            self.loadingView.backgroundColor = UIColor(rgb: 0x444444)
-//            self.loadingIndicator.color = .lightGray
-//            if #available(iOS 13.0, *) {
-//                loadingIndicator.style = .large
-//            }
-//        }
-//
-//        self.loadingView.addSubview(loadingIndicator)
-//        loadingIndicator.centerXAnchor.constraint(equalTo: self.loadingView.centerXAnchor).isActive = true
-//        loadingIndicator.centerYAnchor.constraint(equalTo: self.loadingView.centerYAnchor).isActive = true
-//    }
+    private var loadingView: UIView?
+    private var loadingIndicator: UIActivityIndicatorView?
+    func addLoadingView() {
+        self.loadingView = .init(frame: mapView.frame)
+        if let view = loadingView {
+            self.loadingIndicator = UIActivityIndicatorView(frame: view.frame)
+            self.createLoadingActivityIndicator()
+        }
+    }
+
+    private func createLoadingActivityIndicator() {
+        guard let loadingView = self.loadingView, let loadingIndicator = self.loadingIndicator else { return }
+        self.loadingIndicator?.startAnimating()
+
+        switch mapStyle?.styleMode {
+        case .light:
+            if #available(iOS 13.0, *) {
+                loadingView.backgroundColor = .secondarySystemBackground
+                loadingIndicator.style = .large
+            } else {
+                loadingView.backgroundColor = .lightGray
+            }
+        case .dark:
+            loadingView.backgroundColor = UIColor(rgb: 0x444444)
+            loadingIndicator.color = .lightGray
+            if #available(iOS 13.0, *) {
+                loadingIndicator.style = .large
+            }
+        case .none: break
+        }
+
+        loadingView.addSubview(loadingIndicator)
+        loadingIndicator.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor).isActive = true
+        loadingIndicator.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor).isActive = true
+        mapView.addSubview(loadingView)
+    }
+
+    func dismissLoadingScreen() {
+        UIView.animate(withDuration: 0.5, animations: {
+                self.loadingView?.alpha = 0.0
+                self.loadingIndicator?.alpha = 0.0
+        }) { (_) in
+            self.loadingView?.removeFromSuperview()
+            self.loadingView?.alpha = 1.0
+            self.loadingIndicator?.alpha = 1.0
+        }
+    }
     
     func updateUserPosition(with newPosition: CLLocation) { }
 }
