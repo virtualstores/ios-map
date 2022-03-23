@@ -13,6 +13,7 @@ import VSFoundation
 
 /// CameraMode protacol which will be used for creating any type of mode
 protocol CameraMode {
+    var camera: CameraController? { get }
     var rtlsOptions: RtlsOptions? { get }
     
     func reset()
@@ -79,19 +80,27 @@ internal extension CameraMode {
 
 // MARK: FreeMode
 internal class FreeMode: CameraMode {
+    public var camera: CameraController?
     public var rtlsOptions: RtlsOptions?
     
-    public init() {
-    }
+    public init() {}
 }
 
 // MARK: ContainMapMode
 internal class ContainMapMode: CameraMode {
+    var camera: CameraController?
     var rtlsOptions: RtlsOptions?
     
-    public init() { }
+    public init(with camera: CameraController) {
+        self.camera = camera
+    }
     
     func onEnter() {
+//        camera?.resetCameraToMapMode()
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//            self.camera?.resetCameraToMapMode()
+//        }
+        
         //resetCameraToMapMode
     }
 }
@@ -99,6 +108,7 @@ internal class ContainMapMode: CameraMode {
 // MARK: ThreeDimensionalMode
 internal class ThreeDimensionalMode: CameraMode {
     let mapView: MapView
+    var camera: CameraController?
     var rtlsOptions: RtlsOptions?
     let zoomLevel: Double
     let degree: Double

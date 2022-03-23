@@ -9,51 +9,45 @@ import Foundation
 import CoreGraphics
 import VSFoundation
 @_implementationOnly import MapboxMaps
+import SwiftUI
 
 class CameraController: ICameraController {
-    public var requestedCameraMode: CameraMode?
+    public var requestedCameraMode: CameraModes?
     public var actualCameraMode: CameraMode? {
         didSet {
             actualCameraMode?.onEnter()
         }
     }
-    
-    public var dragDidBegin: (() -> Void)? = nil
-    public var dragDidEnd: (() -> Void)? = nil
-    
+        
     private var mapView: MapView
     private var mapData: MapData
     private var rtlsOptions: RtlsOptions?
     private var lastLocation: Location?
     private var revertCameraModeTimer: Timer?
+    private var revertCameraInterval = 4.0
 
     public init(mapView: MapView, mapData: MapData) {
         self.mapView = mapView
         self.mapData = mapData
     }
     
-    func setInitialCameraMode(for mode: CameraModes) {
-        createCameraMode(for: mode)
-    }
-    
-    func setupInitialCamera() {
-        let width = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.widthInMeters)
-        let height = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.heightInMeters)
-        
-        let mapBounds = CoordinateBounds(rect: CGRect(origin: .zero, size: CGSize(width: width, height: height)))
-        
-        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds,  minZoom: 0.0))
-    }
+//    func setCameraMode(for mode: CameraModes) {
+//        requestedCameraMode = mode
+//        createCameraMode(for: mode)
+//    }
     
     public func updateLocation(with newLocation: CLLocationCoordinate2D, direction: Double) {
         actualCameraMode?.onLocationUpdated(newLocation: newLocation, direction: direction)
     }
     
     public func updateCameraMode(with mode: CameraModes) {
+        requestedCameraMode = mode
         createCameraMode(for: mode)
     }
     
-    public func setAutoCameraResetDelay(with milliseconds: Int64) { }
+    public func setAutoCameraResetDelay(with milliseconds: Double) {
+        revertCameraInterval = milliseconds
+    }
     
     public func resetCameraMode() {
         actualCameraMode?.reset()
@@ -62,28 +56,49 @@ class CameraController: ICameraController {
     private func createCameraMode(for mode: CameraModes) {
         switch mode {
         case .free:
-            actualCameraMode = FreeMode()
+            self.actualCameraMode = FreeMode()
         case .containMap:
-            actualCameraMode = ContainMapMode()
+            self.actualCameraMode = ContainMapMode(with: self)
         case .threeDimensional(let zoomLevel, let degree):
             guard let location = self.lastLocation else { return }
-            actualCameraMode = ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8, degree: degree, location: location.coordinate)
+            let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8, degree: degree, location: location.coordinate)
+            
+            self.actualCameraMode = mode
         }
     }
     
-    private func resetCameraToMapMode() { }
+    func resetCameraToMapBounds() {
+        let width = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.widthInMeters)
+        let height = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.heightInMeters)
+        
+        let mapBounds = CoordinateBounds(rect: CGRect(origin: .zero, size: CGSize(width: width, height: height)))
+        
+        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds,  minZoom: 0.0))
+    }
+    
+    func resetCameraToMapMode() {
+        if let cameraMode = requestedCameraMode, !(actualCameraMode is ContainMapMode) {
+            self.createCameraMode(for: cameraMode)
+
+        } else {
+            self.resetCameraToMapBounds()
+            DispatchQueue.main.asyncAfter(deadline: .now() + revertCameraInterval) {
+                self.resetCameraToMapBounds()
+            }
+        }
+    }
     
     private func revertCameraModeAfter(interval: Double) {
         self.revertCameraModeTimer?.invalidate()
-//        self.revertCameraModeTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false, block: { (_) in
-//            guard let mode = self.mapController?.camera?.getRequestedCameraMode() else {
-//                return
-//            }
-//
-//            self.mapController?.camera?.updateCameraMode(with: mode)
-//            self.revertCameraModeTimer?.invalidate()
-//            self.revertCameraModeTimer = nil
-//        })
+        self.revertCameraModeTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false, block: { (_) in
+            guard let mode = self.requestedCameraMode else {
+                return
+            }
+
+            self.createCameraMode(for: mode)
+            self.revertCameraModeTimer?.invalidate()
+            self.revertCameraModeTimer = nil
+        })
     }
 }
 
@@ -96,17 +111,14 @@ extension CameraController: LocationConsumer {
 /// Was not possible to use the delegate in BaseMapController as it's public
 extension CameraController: GestureManagerDelegate {
     public func gestureManager(_ gestureManager: GestureManager, didBegin gestureType: GestureType) {
-        self.updateCameraMode(with: .free)
+        self.createCameraMode(for: .free)
         self.resetCameraToMapMode()
-        
-        //self.dragDidBegin?()
         Logger.init(verbosity: .debug).log(message: "didBegin")
     }
     
     public func gestureManager(_ gestureManager: GestureManager, didEnd gestureType: GestureType, willAnimate: Bool) {
-        self.revertCameraModeAfter(interval: 4.0)
+        self.revertCameraModeAfter(interval: revertCameraInterval)
 
-        self.dragDidEnd?()
         Logger.init(verbosity: .debug).log(message: "didEnd")
     }
     

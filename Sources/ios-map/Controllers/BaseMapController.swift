@@ -111,18 +111,10 @@ public class BaseMapController: IMapController {
         cameraController = CameraController(mapView: mapViewContainer.mapView, mapData: mapData)
 
         if let controller = cameraController {
-            controller.setupInitialCamera()
-            controller.setInitialCameraMode(for: mode)
+            controller.resetCameraToMapBounds()
+            controller.updateCameraMode(with: mode)
             mapViewContainer.mapView.location.addLocationConsumer(newConsumer: controller)
             mapViewContainer.mapView.gestures.delegate = cameraController
-
-            cameraController?.dragDidEnd = {
-                self.dragDidEnd?()
-            }
-
-            cameraController?.dragDidBegin = {
-                self.dragDidBegin?()
-            }
         }
     }
 
