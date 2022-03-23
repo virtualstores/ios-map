@@ -36,6 +36,9 @@ public class TT2MapView: UIView {
         }
         
         mapView.mapboxMap.onNext(.styleLoaded) { (event) in
+            
+         //   mapViewContainer.mapView.location.addLocationConsumer(newConsumer: controller)
+
             Logger.init(verbosity: .debug).log(message: "The map has finished loading style ... Event = \(event)")
         }
         

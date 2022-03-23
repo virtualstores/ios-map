@@ -56,8 +56,10 @@ class CameraController: ICameraController {
         switch mode {
         case .free:
             self.actualCameraMode = FreeMode()
+        //    try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: nil,  minZoom: 0.0))
         case .containMap:
             self.actualCameraMode = ContainMapMode(with: self)
+            resetCameraToMapBounds()
         case .threeDimensional(let zoomLevel, let degree):
             guard let location = self.lastLocation else { return }
             let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8, degree: degree, location: location.coordinate)
@@ -69,10 +71,13 @@ class CameraController: ICameraController {
     func resetCameraToMapBounds() {
         let width = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.widthInMeters)
         let height = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.heightInMeters)
+        let bound = mapData.rtlsOptions.widthInMeters > mapData.rtlsOptions.heightInMeters ? mapData.rtlsOptions.widthInMeters : mapData.rtlsOptions.heightInMeters
         
-        let mapBounds = CoordinateBounds(rect: CGRect(origin: .zero, size: CGSize(width: width, height: height)))
+        let converted = mapData.converter.convertFromMetersToMapCoordinate(input: bound)
         
-        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: nil,  minZoom: 0.0))
+        let mapBounds = CoordinateBounds(rect: CGRect(origin: .zero, size: CGSize(width: converted, height: converted)))
+        
+        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds,  minZoom: 0.0))
     }
     
     func resetCameraToMapMode() {

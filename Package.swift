@@ -18,6 +18,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/virtualstores/ios-foundation.git", .branch("develop")),
+        //        .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", .upToNextMajor(from: "10.3.0")),
+
         .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", .exact("10.2.0")),
     ],
     targets: [
