@@ -30,11 +30,10 @@ class CameraController: ICameraController {
         self.mapView = mapView
         self.mapData = mapData
     }
-    
-//    func setCameraMode(for mode: CameraModes) {
-//        requestedCameraMode = mode
-//        createCameraMode(for: mode)
-//    }
+
+    func setInitialCameraMode(for mode: CameraModes) {
+        createCameraMode(for: mode)
+    }
     
     public func updateLocation(with newLocation: CLLocationCoordinate2D, direction: Double) {
         actualCameraMode?.onLocationUpdated(newLocation: newLocation, direction: direction)
@@ -73,7 +72,7 @@ class CameraController: ICameraController {
         
         let mapBounds = CoordinateBounds(rect: CGRect(origin: .zero, size: CGSize(width: width, height: height)))
         
-        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds,  minZoom: 0.0))
+        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: nil,  minZoom: 0.0))
     }
     
     func resetCameraToMapMode() {

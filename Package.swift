@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ios-map",
+    name: "VSMap",
     platforms: [
       .iOS(.v13),
       .macOS(.v11),

@@ -70,7 +70,7 @@ public class BaseMapController: IMapController {
 
     public func start() {
         mapViewContainer.addLoadingView()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             self.setupUserMarker()
         }
     }
@@ -100,7 +100,7 @@ public class BaseMapController: IMapController {
               mapViewContainer.mapView.location.options.puckType = .puck2D()
           }
 
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
               self.mapViewContainer.dismissLoadingScreen()
           }
       }
@@ -135,11 +135,11 @@ public class BaseMapController: IMapController {
 
     public func stop() {
         mapViewContainer.addLoadingView()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             self.mapViewContainer.mapView.location.options.puckType = .none
             self.mapViewContainer.mapView.location.locationProvider.stopUpdatingLocation()
             self.mapViewContainer.mapView.location.locationProvider.stopUpdatingHeading()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self.mapViewContainer.dismissLoadingScreen()
             }
         }
