@@ -54,10 +54,12 @@ public class TT2MapView: UIView {
     private var loadingView: UIView?
     private var loadingIndicator: UIActivityIndicatorView?
     func addLoadingView() {
-        self.loadingView = .init(frame: mapView.frame)
-        if let view = loadingView {
-            self.loadingIndicator = UIActivityIndicatorView(frame: view.frame)
-            self.createLoadingActivityIndicator()
+        DispatchQueue.main.async {
+            self.loadingView = .init(frame: self.mapView.frame)
+            if let view = self.loadingView {
+                self.loadingIndicator = UIActivityIndicatorView(frame: view.frame)
+                self.createLoadingActivityIndicator()
+            }
         }
     }
 

@@ -109,14 +109,12 @@ internal class ThreeDimensionalMode: CameraMode {
     var camera: CameraController?
     var rtlsOptions: RtlsOptions?
     let zoomLevel: Double
-    let degree: Double
-    let lastLocation: CLLocationCoordinate2D
+    var direction: Double = .zero
+    var lastLocation: CLLocationCoordinate2D = CLLocationCoordinate2D()
 
-    init(mapView: MapView, zoomLevel: Double, degree: Double, location: CLLocationCoordinate2D) {
+    init(mapView: MapView, zoomLevel: Double) {
         self.mapView = mapView
         self.zoomLevel = zoomLevel
-        self.degree = degree
-        self.lastLocation = location
     }
     
     func onEnter() {
@@ -128,8 +126,9 @@ internal class ThreeDimensionalMode: CameraMode {
     }
     
     func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double) {
-        let state = CameraState(center: newLocation, padding: .zero, zoom: 8, bearing: direction, pitch: 25)
-        self.mapView.mapboxMap.setCamera(to: CameraOptions(cameraState: state))
+        self.lastLocation = newLocation
+        self.direction = direction
+        self.moveCameraToUser()
     }
     
     private func moveCameraToUser() {
@@ -138,7 +137,7 @@ internal class ThreeDimensionalMode: CameraMode {
         camera.center = lastLocation
         camera.pitch = 25
         
-        camera.bearing = degree < 0 ? 360 + degree : degree
+        camera.bearing = direction < 0 ? 360 + direction : direction
 
         if camera.zoom != self.zoomLevel {
             camera.zoom = self.zoomLevel

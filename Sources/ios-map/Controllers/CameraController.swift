@@ -58,9 +58,8 @@ class CameraController: ICameraController {
             self.actualCameraMode = FreeMode()
         case .containMap:
             self.actualCameraMode = ContainMapMode(with: self)
-        case .threeDimensional(let zoomLevel, let degree):
-            guard let location = self.lastLocation else { return }
-            let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8, degree: degree, location: location.coordinate)
+        case .threeDimensional(let zoomLevel, _):
+            let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 10)
             
             self.actualCameraMode = mode
         }

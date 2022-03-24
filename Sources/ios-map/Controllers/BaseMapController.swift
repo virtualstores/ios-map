@@ -126,10 +126,12 @@ public class BaseMapController: IMapController {
         let mapStd = converter.convertFromPixelsToMapCoordinate(input: convertedStd)
 
         location.updateUserLocation(newLocation: mapPosition, std: Float(mapStd))
-        cameraController?.updateLocation(with: mapPosition, direction: Double(std))
+        cameraController?.updateLocation(with: mapPosition, direction: direction)
     }
 
+    var direction: Double = .zero
     public func updateUserDirection(newDirection: Double) {
+        direction = newDirection
         location.updateUserDirection(newDirection: newDirection)
     }
 
