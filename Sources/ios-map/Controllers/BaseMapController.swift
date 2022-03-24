@@ -111,7 +111,7 @@ public class BaseMapController: IMapController {
         cameraController = CameraController(mapView: mapViewContainer.mapView, mapData: mapData)
 
         if let controller = cameraController {
-            //controller.resetCameraToMapBounds()
+            controller.resetCameraToMapBounds()
             controller.updateCameraMode(with: mode)
             mapViewContainer.mapView.location.addLocationConsumer(newConsumer: controller)
             mapViewContainer.mapView.gestures.delegate = cameraController

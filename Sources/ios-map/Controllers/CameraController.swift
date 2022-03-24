@@ -18,19 +18,19 @@ class CameraController: ICameraController {
             actualCameraMode?.onEnter()
         }
     }
-        
+    
     private var mapView: MapView
     private var mapData: MapData
     private var rtlsOptions: RtlsOptions?
     private var lastLocation: Location?
     private var revertCameraModeTimer: Timer?
     private var revertCameraInterval = 4.0
-
+    
     public init(mapView: MapView, mapData: MapData) {
         self.mapView = mapView
         self.mapData = mapData
     }
-
+    
     func setInitialCameraMode(for mode: CameraModes) {
         createCameraMode(for: mode)
     }
@@ -56,10 +56,8 @@ class CameraController: ICameraController {
         switch mode {
         case .free:
             self.actualCameraMode = FreeMode()
-        //    try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: nil,  minZoom: 0.0))
         case .containMap:
             self.actualCameraMode = ContainMapMode(with: self)
-            resetCameraToMapBounds()
         case .threeDimensional(let zoomLevel, let degree):
             guard let location = self.lastLocation else { return }
             let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8, degree: degree, location: location.coordinate)
@@ -69,21 +67,25 @@ class CameraController: ICameraController {
     }
     
     func resetCameraToMapBounds() {
-        let width = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.widthInMeters)
-        let height = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.heightInMeters)
-        let bound = mapData.rtlsOptions.widthInMeters > mapData.rtlsOptions.heightInMeters ? mapData.rtlsOptions.widthInMeters : mapData.rtlsOptions.heightInMeters
+        let width = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.widthInMeters )
         
-        let converted = mapData.converter.convertFromMetersToMapCoordinate(input: bound)
+        let heightInMeters = mapData.rtlsOptions.widthInMeters > mapData.rtlsOptions.heightInMeters ? mapData.rtlsOptions.widthInMeters : mapData.rtlsOptions.heightInMeters
         
-        let mapBounds = CoordinateBounds(rect: CGRect(origin: .zero, size: CGSize(width: converted, height: converted)))
+        let height = mapData.converter.convertFromMetersToMapCoordinate(input: heightInMeters)
         
-        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds,  minZoom: 0.0))
+        let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: -(width * 0.3), y: -(height * 0.8)), size: CGSize(width: width * 1.6, height: height * 2.0)))
+        
+        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds, minZoom: 0.0))
+        
+        let camera = mapView.mapboxMap.camera(for: mapBounds, padding: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0), bearing: 0, pitch: 0)
+        
+        mapView.mapboxMap.setCamera(to: camera)
     }
     
     func resetCameraToMapMode() {
         if let cameraMode = requestedCameraMode, !(actualCameraMode is ContainMapMode) {
             self.createCameraMode(for: cameraMode)
-
+            
         } else {
             self.resetCameraToMapBounds()
             DispatchQueue.main.asyncAfter(deadline: .now() + revertCameraInterval) {
@@ -98,7 +100,7 @@ class CameraController: ICameraController {
             guard let mode = self.requestedCameraMode else {
                 return
             }
-
+            
             self.createCameraMode(for: mode)
             self.revertCameraModeTimer?.invalidate()
             self.revertCameraModeTimer = nil
@@ -112,17 +114,14 @@ extension CameraController: LocationConsumer {
     }
 }
 
-/// Was not possible to use the delegate in BaseMapController as it's public
 extension CameraController: GestureManagerDelegate {
     public func gestureManager(_ gestureManager: GestureManager, didBegin gestureType: GestureType) {
         self.createCameraMode(for: .free)
-        self.resetCameraToMapMode()
         Logger.init(verbosity: .debug).log(message: "didBegin")
     }
     
     public func gestureManager(_ gestureManager: GestureManager, didEnd gestureType: GestureType, willAnimate: Bool) {
         self.revertCameraModeAfter(interval: revertCameraInterval)
-
         Logger.init(verbosity: .debug).log(message: "didEnd")
     }
     

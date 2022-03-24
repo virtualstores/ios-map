@@ -96,12 +96,10 @@ internal class ContainMapMode: CameraMode {
     }
     
     func onEnter() {
-//        camera?.resetCameraToMapMode()
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-//            self.camera?.resetCameraToMapMode()
-//        }
-        
-        //resetCameraToMapMode
+        camera?.resetCameraToMapMode()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.camera?.resetCameraToMapMode()
+        }
     }
 }
 
