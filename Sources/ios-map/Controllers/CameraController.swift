@@ -20,15 +20,15 @@ class CameraController: ICameraController {
     }
     
     private var mapView: MapView
-    private var mapData: MapData
+    private var mapRepository: MapRepository
     private var rtlsOptions: RtlsOptions?
     private var lastLocation: Location?
     private var revertCameraModeTimer: Timer?
     private var revertCameraInterval = 4.0
     
-    public init(mapView: MapView, mapData: MapData) {
+    public init(mapView: MapView, mapRepository: MapRepository) {
         self.mapView = mapView
-        self.mapData = mapData
+        self.mapRepository = mapRepository
     }
     
     func setInitialCameraMode(for mode: CameraModes) {
@@ -66,11 +66,11 @@ class CameraController: ICameraController {
     }
     
     func resetCameraToMapBounds() {
-        let width = mapData.converter.convertFromMetersToMapCoordinate(input: mapData.rtlsOptions.widthInMeters )
+        let width = mapRepository.mapData.converter.convertFromMetersToMapCoordinate(input: mapRepository.mapData.rtlsOptions.widthInMeters )
         
-        let heightInMeters = mapData.rtlsOptions.widthInMeters > mapData.rtlsOptions.heightInMeters ? mapData.rtlsOptions.widthInMeters : mapData.rtlsOptions.heightInMeters
+        let heightInMeters = mapRepository.mapData.rtlsOptions.widthInMeters > mapRepository.mapData.rtlsOptions.heightInMeters ? mapRepository.mapData.rtlsOptions.widthInMeters : mapRepository.mapData.rtlsOptions.heightInMeters
         
-        let height = mapData.converter.convertFromMetersToMapCoordinate(input: heightInMeters)
+        let height = mapRepository.mapData.converter.convertFromMetersToMapCoordinate(input: heightInMeters)
         
         let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: -(width * 0.3), y: -(height * 0.8)), size: CGSize(width: width * 1.6, height: height * 2.0)))
         

@@ -12,7 +12,7 @@ import VSFoundation
 
 public class TT2MapView: UIView {
     internal var mapView: MapView!
-    var mapStyle: MapStyle?
+    var mapStyle: VSFoundation.MapOptions.MapStyle?
     
     public func setup(with token: String) {
         let myResourceOptions = ResourceOptions(accessToken: token)

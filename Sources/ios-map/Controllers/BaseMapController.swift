@@ -10,8 +10,11 @@ import CoreLocation
 import CoreGraphics
 import VSFoundation
 import MapboxMaps
+import Combine
 
 public class BaseMapController: IMapController {
+    public var mapDataLoadedPublisher: CurrentValueSubject<Bool?, MapControllerError> = .init(false)
+    
     public var dragDidBegin: (() -> Void)? = nil
     public var dragDidEnd: (() -> Void)? = nil
 
@@ -25,42 +28,57 @@ public class BaseMapController: IMapController {
         return location
     }
 
-    public var camera: ICameraController? {
+    public var camera: ICameraController {
         guard let camera = cameraController else {
             fatalError("Camera not loadede")
         }
 
         return camera
     }
+    
+    public var marker: IMarkerController {
+        guard let marker = markerController else { fatalError("marker not loaded")}
+        
+        return marker
+    }
+    
+    private var locationController: LocationController {
+        guard let internalLocation = internalLocation else { fatalError("location not loaded")}
+        
+        return internalLocation
+    }
 
     //Controllers for helpin baseController to setup map
     var internalLocation: LocationController?
     var cameraController: CameraController?
-
+    var markerController: MarkerControllerImpl?
+    
+    private var mapRepository = MapRepository()
     private var mapViewContainer: TT2MapView
-    private var currentStyle: Style?
 
     private var styleLoaded: Bool = false
 
-    public init(with token: String, view: TT2MapView) {
+    public init(with token: String, view: TT2MapView, mapOptions: VSFoundation.MapOptions) {
         self.mapViewContainer = view
         self.mapViewContainer.setup(with: token)
+        
+        mapRepository.mapOptions = mapOptions
+        markerController = MarkerControllerImpl(mapRepository: mapRepository)
     }
 
     /// Map loader which will receave all needed  setup information
     public func loadMap(with mapData: MapData) {
-        self.mapData = mapData
+        self.mapRepository.mapData = mapData
 
         guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
 
-        mapViewContainer.mapStyle = mapData.style
+        mapViewContainer.mapStyle = self.mapRepository.mapOptions.style
         mapViewContainer.addLoadingView()
+        mapRepository.map = mapViewContainer.mapView.mapboxMap
         mapViewContainer.mapView.mapboxMap.loadStyleURI(styleURI) { [weak self] result in
             switch result {
             case .success(let style):
-                self?.currentStyle = style
-                self?.onStyleLoaded()
-                self?.setupCamera(with: .free)
+                self?.onStyleLoaded(style: style)
                 self?.mapViewContainer.dismissLoadingScreen()
             case let .failure(error):
                 Logger.init(verbosity: .debug).log(message: "The map failed to load the style: \(error)")
@@ -75,23 +93,28 @@ public class BaseMapController: IMapController {
         }
     }
 
-    private func onStyleLoaded() {
+    private func onStyleLoaded(style: Style) {
         internalLocation = LocationController()
-        guard let location = internalLocation else { return }
 
-        mapViewContainer.mapView.location.overrideLocationProvider(with: location)
+        mapRepository.style = style
+
+        setupCamera(with: .free)
+        markerController?.onStyleUpdated()
+
+        mapViewContainer.mapView.location.overrideLocationProvider(with: locationController)
         mapViewContainer.mapView.location.locationProvider.startUpdatingLocation()
         mapViewContainer.mapView.location.locationProvider.startUpdatingHeading()
         mapViewContainer.mapView.location.options.activityType = .other
         mapViewContainer.mapView.location.options.puckBearingSource = .heading
 
         styleLoaded = true
-        internalLocation?.setOptions(options: mapViewContainer.mapView.location.options)
+        locationController.setOptions(options: mapViewContainer.mapView.location.options)
+        mapDataLoadedPublisher.send(true)
     }
 
       private func setupUserMarker() {
           guard styleLoaded else { return }
-          let image = mapData?.style?.userMarkerImage
+          let image = mapRepository.mapOptions.style.userMarkerImage
 
           if let userMarkerImage = image {
               let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)
@@ -106,9 +129,7 @@ public class BaseMapController: IMapController {
       }
 
     private func setupCamera(with mode: CameraModes) {
-        guard let mapData = self.mapData else { return }
-
-        cameraController = CameraController(mapView: mapViewContainer.mapView, mapData: mapData)
+        cameraController = CameraController(mapView: mapViewContainer.mapView, mapRepository: mapRepository)
 
         if let controller = cameraController {
             controller.resetCameraToMapBounds()
@@ -148,5 +169,6 @@ public class BaseMapController: IMapController {
     }
 
     public func reset() { }
+
 }
 
