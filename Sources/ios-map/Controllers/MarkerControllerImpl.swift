@@ -169,9 +169,7 @@ class MarkerControllerImpl: IMarkerController {
         //var unclusterableMarkers = markerFeatures.filter({ $0.key != PROP_CLUSTERABLE } )
         
         let featureCollection = FeatureCollection(features: markers)
-        _markerSource?.data = .featureCollection(featureCollection)
-
-        try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: GeoJSONObject.featureCollection(featureCollection))
+        try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .featureCollection(featureCollection))
     }
     
     private func createMark(mark: MapMark, onFinish: @escaping (Result<Feature, Error>) -> Void ) {
@@ -188,9 +186,8 @@ class MarkerControllerImpl: IMarkerController {
             feature.properties?[self.PROP_CLUSTERABLE] = .boolean(mark.clusterable)
             feature.properties?[self.PROP_OFFSET_X] = .number(mark.offsetX)
             feature.properties?[self.PROP_OFFSET_Y] = .number(mark.offsetY)
-            
-            //add VISIBLE check with floor
-            feature.properties?[self.PROP_VISIBLE] = .boolean(true)
+
+            feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == mark.floorLevelId)
 
             onFinish(.success(feature))
         }
@@ -201,9 +198,11 @@ class MarkerControllerImpl: IMarkerController {
         createMark(mark: mark) { result in
             switch result {
             case .success(let feature):
-                self.markers[mark.id] = mark
-                self.markerFeatures[mark.id] = feature
-                self.lineFeatures[mark.id] = feature
+                if let visible = feature.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool, visible {
+                    self.markers[mark.id] = mark
+                    self.markerFeatures[mark.id] = feature
+                }
+
                 self.refreshMarkers()
             default: break
             }
@@ -241,7 +240,7 @@ class MarkerControllerImpl: IMarkerController {
     }
     
     func focusMark(id: String) {
-        markerFeatures[id]?.properties?[PROP_FOCUSED] = true
+        markerFeatures[id]?.properties?[PROP_FOCUSED] = .boolean(true)
         //  markerFeatures[id]?.addBooleanProperty(PROP_FOCUSED, true)
         refreshMarkers()
         // animateMarkerFocused(true)
