@@ -61,6 +61,7 @@ class MarkerControllerImpl: IMarkerController {
     
     private var markers = [String: MapMark]()
     private var markerFeatures = [String : Feature]()
+    private var lineFeatures = [String : Feature]()
     private var startLocationFeatures = [String : Feature]()
     private var style: Style? = nil
     private var isStartLocationsVisible = false
@@ -102,21 +103,23 @@ class MarkerControllerImpl: IMarkerController {
         _markerSource?.clusterRadius = mapOptions.cluster.clusterRadius
         _markerSource?.clusterMaxZoom = mapOptions.cluster.clusterMaxZoom
         
-        _markerSource?.clusterProperties = [
-            PROP_CLUSTER_IDS : Expression(.accumulated) {
-                Expression(.concat) {
-                    Exp(.accumulated){
-                        Exp(.get) {
-                        }
-                    }
-                }
-                Expression(.concat) {
-                    Exp(.get) {PROP_ID}
-                    Exp(.literal) {ARRAY_SEPARATOR}
-                }
-            },
-            PROP_TRANSPARENCY : Expression(.accumulated)
-        ]
+//        _markerSource?.clusterProperties = [
+//            PROP_CLUSTER_IDS : Expression(.accumulated) {
+//                Expression(.concat) {
+//                    Exp(.accumulated){
+//                        Exp(.get) {
+//                        }
+//                    }
+//                }
+//                Expression(.concat) {
+//                    Exp(.get) {PROP_ID}
+//                    Exp(.literal) {ARRAY_SEPARATOR}
+//                }
+//            },
+//            PROP_TRANSPARENCY : Expression(.accumulated)
+//        ]
+
+        _markerSource?.data = .empty
         
         
         _markerLayer = SymbolLayer(id: MARKER_LAYER_ID)
@@ -148,6 +151,7 @@ class MarkerControllerImpl: IMarkerController {
         _markerLayer?.iconSize = .constant(1.0)  //options.mapMark.scaleSize
         _markerLayer?.iconAllowOverlap = .constant(true)
         _markerLayer?.iconOpacity = .expression(Exp(.get){ PROP_TRANSPARENCY })
+        _markerLayer?.visibility = .constant(.visible)
     }
     
     private func addMapMark() {
@@ -160,40 +164,34 @@ class MarkerControllerImpl: IMarkerController {
     }
     
     private func refreshMarkers() {
-        let markers = markerFeatures.filter({ $0.key == PROP_CLUSTERABLE }).map({ $0.value })
-        
+        let markers = markerFeatures.map({ $0.value })
+
         //var unclusterableMarkers = markerFeatures.filter({ $0.key != PROP_CLUSTERABLE } )
         
         let featureCollection = FeatureCollection(features: markers)
         _markerSource?.data = .featureCollection(featureCollection)
-        //
-        //        var locationsAndMarks = startLocationFeatures.values + markers
-        //        markerSource.setGeoJson(FeatureCollection.fromFeatures(locationsAndMarks))
-        //        unclusterableMarkerSource.setGeoJson(FeatureCollection.fromFeatures(unclusterableMarkers))
-        //
-        
-        //   }
+
+        try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: GeoJSONObject.featureCollection(featureCollection))
     }
     
     private func createMark(mark: MapMark, onFinish: @escaping (Result<Feature, Error>) -> Void ) {
         mark.createViewHolder { holder in
-            try? self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [ImageStretches(first: 0.0, second: 0.0), ImageStretches(first: 0.0, second: 0.0)], stretchY: [ImageStretches(first: 0.0, second: 0.0), ImageStretches(first: 0.0, second: 0.0)])
-            //maybe need use converter
+            try! self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
             let mapPosition = mark.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
+            var feature = Feature(geometry: .point(Point(mapPosition)))
 
-           // let position = LocationCoordinate2D(latitude: mark.position.x, longitude: mark.position.y)
-            var feature = Feature(geometry: Geometry.point(Point(mapPosition)))
-            
-            feature.properties?[self.PROP_ICON] = JSONValue.string(holder.imageId)
-            feature.properties?[self.PROP_ID] = JSONValue.string(holder.id)
-            feature.properties?[self.PROP_FOCUSED] = JSONValue.boolean(false)
-            feature.properties?[self.PROP_CLUSTERABLE] = JSONValue.boolean(mark.clusterable)
-            feature.properties?[self.PROP_OFFSET_X] = JSONValue.number(Double(mark.offsetX))
-            feature.properties?[self.PROP_OFFSET_Y] = JSONValue.number(Double(mark.offsetY))
+            feature.identifier = FeatureIdentifier.string(mark.id)
+            feature.properties = JSONObject()
+            feature.properties?[self.PROP_ICON] = .string(holder.imageId)
+            feature.properties?[self.PROP_ID] = .string(holder.id)
+            feature.properties?[self.PROP_FOCUSED] = .boolean(false)
+            feature.properties?[self.PROP_CLUSTERABLE] = .boolean(mark.clusterable)
+            feature.properties?[self.PROP_OFFSET_X] = .number(mark.offsetX)
+            feature.properties?[self.PROP_OFFSET_Y] = .number(mark.offsetY)
             
             //add VISIBLE check with floor
-            feature.properties?[self.PROP_VISIBLE] = JSONValue.boolean(true)
-            
+            feature.properties?[self.PROP_VISIBLE] = .boolean(true)
+
             onFinish(.success(feature))
         }
     }
@@ -205,6 +203,7 @@ class MarkerControllerImpl: IMarkerController {
             case .success(let feature):
                 self.markers[mark.id] = mark
                 self.markerFeatures[mark.id] = feature
+                self.lineFeatures[mark.id] = feature
                 self.refreshMarkers()
             default: break
             }
@@ -282,9 +281,9 @@ class MarkerControllerImpl: IMarkerController {
 extension MarkerControllerImpl {
     func onStyleUpdated() {
         initSources()
-        
-        try? mapRepository.style.addSource(markerSource, id: SOURCE_ID)
-        try? mapRepository.style.addLayer(markerLayer, layerPosition: nil)
+
+        try! mapRepository.style.addSource(markerSource, id: SOURCE_ID)
+        try! mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.default)
     }
     
     func onMapUpdated() {
