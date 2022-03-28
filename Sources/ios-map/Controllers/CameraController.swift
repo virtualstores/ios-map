@@ -8,7 +8,7 @@
 import Foundation
 import CoreGraphics
 import VSFoundation
-@_implementationOnly import MapboxMaps
+import MapboxMaps
 import SwiftUI
 
 class CameraController: ICameraController {

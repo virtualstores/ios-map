@@ -8,7 +8,7 @@
 import Foundation
 import CoreGraphics
 import CoreLocation
-@_implementationOnly import MapboxMaps
+import MapboxMaps
 import VSFoundation
 
 /// CameraMode protacol which will be used for creating any type of mode

@@ -8,7 +8,7 @@
 import Foundation
 import CoreLocation
 import VSFoundation
-@_implementationOnly import MapboxMaps
+import MapboxMaps
 
 class LocationController: ILocation, LocationProvider {
     // MARK: ILocation properties

@@ -7,7 +7,7 @@
 
 import SwiftUI
 import CoreLocation
-@_implementationOnly import MapboxMaps
+import MapboxMaps
 import VSFoundation
 
 public class TT2MapView: UIView {
@@ -54,12 +54,19 @@ public class TT2MapView: UIView {
     private var loadingView: UIView?
     private var loadingIndicator: UIActivityIndicatorView?
     func addLoadingView() {
-        DispatchQueue.main.async {
-            self.loadingView = .init(frame: self.mapView.frame)
-            if let view = self.loadingView {
-                self.loadingIndicator = UIActivityIndicatorView(frame: view.frame)
-                self.createLoadingActivityIndicator()
+        guard let loadingView = loadingView else {
+            DispatchQueue.main.async {
+                self.loadingView = .init(frame: self.mapView.frame)
+                if let view = self.loadingView {
+                    self.loadingIndicator = UIActivityIndicatorView(frame: view.frame)
+                    self.createLoadingActivityIndicator()
+                }
             }
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.mapView.addSubview(loadingView)
         }
     }
 

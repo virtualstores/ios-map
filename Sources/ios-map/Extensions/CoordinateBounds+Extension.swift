@@ -6,7 +6,7 @@
 //
 
 import Foundation
-@_implementationOnly import MapboxMaps
+import MapboxMaps
 
 extension CoordinateBounds {
     var center: CLLocationCoordinate2D {

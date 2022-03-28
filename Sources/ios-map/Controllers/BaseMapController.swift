@@ -18,7 +18,9 @@ public class BaseMapController: IMapController {
     public var dragDidBegin: (() -> Void)? = nil
     public var dragDidEnd: (() -> Void)? = nil
 
-    var mapData: MapData?
+    var mapData: MapData {
+        mapRepository.mapData
+    }
 
     public var location: ILocation {
         guard let location = internalLocation else {
@@ -140,11 +142,11 @@ public class BaseMapController: IMapController {
     }
 
     public func updateUserLocation(newLocation: CGPoint?, std: Float?) {
-        guard let position = newLocation, let converter = mapData?.converter, let std = std else { return }
+        guard let position = newLocation, let std = std else { return }
 
-        let mapPosition = position.convertFromMeterToLatLng(converter: converter)
-        let convertedStd = converter.convertFromMetersToPixels(input: Double(std))
-        let mapStd = converter.convertFromPixelsToMapCoordinate(input: convertedStd)
+        let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
+        let convertedStd = mapData.converter.convertFromMetersToPixels(input: Double(std))
+        let mapStd = mapData.converter.convertFromPixelsToMapCoordinate(input: convertedStd)
 
         location.updateUserLocation(newLocation: mapPosition, std: Float(mapStd))
         cameraController?.updateLocation(with: mapPosition, direction: direction)
