@@ -150,7 +150,7 @@ class MarkerControllerImpl: IMarkerController {
         _markerLayer?.iconOpacity = .expression(Exp(.get){ PROP_TRANSPARENCY })
     }
     
-    private func addMapMark(){
+    private func addMapMark() {
         
     }
     
@@ -179,8 +179,10 @@ class MarkerControllerImpl: IMarkerController {
         mark.createViewHolder { holder in
             try? self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [ImageStretches(first: 0.0, second: 0.0), ImageStretches(first: 0.0, second: 0.0)], stretchY: [ImageStretches(first: 0.0, second: 0.0), ImageStretches(first: 0.0, second: 0.0)])
             //maybe need use converter
-            let position = LocationCoordinate2D(latitude: mark.position.x, longitude: mark.position.y)
-            var feature = Feature(geometry: Geometry.point(Point(position)))
+            let mapPosition = mark.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
+
+           // let position = LocationCoordinate2D(latitude: mark.position.x, longitude: mark.position.y)
+            var feature = Feature(geometry: Geometry.point(Point(mapPosition)))
             
             feature.properties?[self.PROP_ICON] = JSONValue.string(holder.imageId)
             feature.properties?[self.PROP_ID] = JSONValue.string(holder.id)
@@ -283,21 +285,6 @@ extension MarkerControllerImpl {
         
         try? mapRepository.style.addSource(markerSource, id: SOURCE_ID)
         try? mapRepository.style.addLayer(markerLayer, layerPosition: nil)
-        
-        
-        
-        
-        //        self.style = mapRepository.style.apply {
-        //            ContextCompat.getDrawable(context, R.drawable.cluster_icon)?.let {
-        //                addImage(CLUSTER_ICON, it)
-        //            }
-        //
-        //            addSource(markerSource)
-        //            addLayer(markerLayer)
-        //        }
-        //
-        //        let markers = markers.map({ $0.value })
-        //        setMarks(markers)
     }
     
     func onMapUpdated() {
