@@ -15,14 +15,14 @@ public class BaseMapMark: MapMark {
     public var position: CGPoint
     public var floorLevelId: Int64?
     public var triggerRadius: Double?
-    public var data: Any?
+    public var data: UIImage?
     public var clusterable: Bool
     public var deletable: Bool
     public var defaultVisibility: Bool
     public var offsetX: Double
     public var offsetY: Double
     
-    public init(id: String, position: CGPoint, floorLevelId: Int64?, triggerRadius: Double?, data: Any?, clusterable: Bool, deletable: Bool, defaultVisibility: Bool, offsetX: Double, offsetY: Double) {
+    public init(id: String, position: CGPoint, floorLevelId: Int64?, triggerRadius: Double?, data: UIImage?, clusterable: Bool, deletable: Bool, defaultVisibility: Bool, offsetX: Double, offsetY: Double) {
         self.id = id
         self.position = position
         self.floorLevelId = floorLevelId
@@ -37,9 +37,9 @@ public class BaseMapMark: MapMark {
     
     public func createViewHolder(onFinish: @escaping (MapMarkViewHolder) -> ()) {
        let marker =  MapMarkViewHolder(id: self.id)
-        guard let image = UIImage(named: "userMarker") else { return }
         
-        marker._renderedBitmap = image
+        let data = self.data 
+        marker._renderedBitmap = data
         
         onFinish(marker)
     }
