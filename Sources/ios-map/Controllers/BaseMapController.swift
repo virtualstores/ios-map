@@ -43,6 +43,12 @@ public class BaseMapController: IMapController {
         
         return marker
     }
+
+    public var path: IFoundationPathfinder {
+        guard let path = pathfinderController.pathfinder else { fatalError("path not loaded") }
+
+        return path
+    }
     
     private var locationController: LocationController {
         guard let internalLocation = internalLocation else { fatalError("location not loaded")}
@@ -54,6 +60,7 @@ public class BaseMapController: IMapController {
     var internalLocation: LocationController?
     var cameraController: CameraController?
     var markerController: MarkerControllerImpl?
+    var pathfinderController: PathfinderController
     
     private var mapRepository = MapRepository()
     private var mapViewContainer: TT2MapView
@@ -65,7 +72,12 @@ public class BaseMapController: IMapController {
         self.mapViewContainer.setup(with: token)
         
         mapRepository.mapOptions = mapOptions
+        pathfinderController = PathfinderController(mapRepository: mapRepository)
         markerController = MarkerControllerImpl(mapRepository: mapRepository)
+    }
+
+    public func setup(pathfinder: IFoundationPathfinder) {
+      pathfinderController.pathfinder = pathfinder
     }
 
     /// Map loader which will receave all needed  setup information
@@ -102,6 +114,7 @@ public class BaseMapController: IMapController {
 
         setupCamera(with: .free)
         markerController?.onStyleUpdated()
+        pathfinderController.onStyleUpdated()
 
         mapViewContainer.mapView.location.overrideLocationProvider(with: locationController)
         mapViewContainer.mapView.location.locationProvider.startUpdatingLocation()
@@ -150,6 +163,7 @@ public class BaseMapController: IMapController {
 
         location.updateUserLocation(newLocation: mapPosition, std: Float(mapStd))
         cameraController?.updateLocation(with: mapPosition, direction: direction)
+        pathfinderController.onNewPosition(position: position)
     }
 
     var direction: Double = .zero
@@ -157,6 +171,10 @@ public class BaseMapController: IMapController {
         direction = newDirection
         location.updateUserDirection(newDirection: newDirection)
     }
+
+  public func addGoal(id: String, itemPosition: ItemPosition) {
+
+}
 
     public func stop() {
         mapViewContainer.addLoadingView()

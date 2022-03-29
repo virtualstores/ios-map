@@ -49,7 +49,7 @@ class MarkerControllerImpl: IMarkerController {
     let CLUSTER_TRIGGER_RADIUS = 60000
     let CLUSTER_ICON_SIZE = 64
     
-    private var mapRepository: MapRepository
+    private let mapRepository: MapRepository
     
     private var mapOptions: VSFoundation.MapOptions {
         mapRepository.mapOptions
@@ -61,9 +61,7 @@ class MarkerControllerImpl: IMarkerController {
     
     private var markers = [String: MapMark]()
     private var markerFeatures = [String : Feature]()
-    private var lineFeatures = [String : Feature]()
     private var startLocationFeatures = [String : Feature]()
-    private var style: Style? = nil
     private var isStartLocationsVisible = false
     
     private var _markerSource: GeoJSONSource? = nil
@@ -90,7 +88,6 @@ class MarkerControllerImpl: IMarkerController {
     
     public init(mapRepository: MapRepository) {
         self.mapRepository = mapRepository
-        
     }
     
     public func setup(with mapOptions: VSFoundation.MapOptions, floorLevelId: Int64?) {
@@ -169,16 +166,17 @@ class MarkerControllerImpl: IMarkerController {
         //var unclusterableMarkers = markerFeatures.filter({ $0.key != PROP_CLUSTERABLE } )
         
         let featureCollection = FeatureCollection(features: markers)
+        _markerSource?.data = .featureCollection(featureCollection)
         try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .featureCollection(featureCollection))
     }
     
-    private func create(marker: MapMark, onFinish: @escaping (Result<Feature, Error>) -> Void ) {
+    private func create(marker: MapMark, completion: @escaping (Result<Feature, Error>) -> Void ) {
         marker.createViewHolder { holder in
             try! self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
             let mapPosition = marker.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
             var feature = Feature(geometry: .point(Point(mapPosition)))
 
-            feature.identifier = FeatureIdentifier.string(marker.id)
+            feature.identifier = .string(marker.id)
             feature.properties = JSONObject()
             feature.properties?[self.PROP_ICON] = .string(holder.imageId)
             feature.properties?[self.PROP_ID] = .string(holder.id)
@@ -189,7 +187,7 @@ class MarkerControllerImpl: IMarkerController {
 
             feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == marker.floorLevelId)
 
-            onFinish(.success(feature))
+            completion(.success(feature))
         }
     }
     

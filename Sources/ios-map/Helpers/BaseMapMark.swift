@@ -35,12 +35,12 @@ public class BaseMapMark: MapMark {
         self.offsetX = offsetX
     }
     
-    public func createViewHolder(onFinish: @escaping (MapMarkViewHolder) -> ()) {
+    public func createViewHolder(completion: @escaping (MapMarkViewHolder) -> ()) {
        let marker =  MapMarkViewHolder(id: self.id)
         
         let data = self.data 
         marker._renderedBitmap = data
         
-        onFinish(marker)
+        completion(marker)
     }
 }
