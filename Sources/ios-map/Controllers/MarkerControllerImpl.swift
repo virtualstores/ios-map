@@ -11,7 +11,7 @@ import CoreGraphics
 import MapboxMaps
 
 class MarkerControllerImpl: IMarkerController {
-    var allMarks: [MapMark] = []
+    var allMarkers: [MapMark] = []
     
     private let TAG = "MarkerController"
     
@@ -172,35 +172,35 @@ class MarkerControllerImpl: IMarkerController {
         try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .featureCollection(featureCollection))
     }
     
-    private func createMark(mark: MapMark, onFinish: @escaping (Result<Feature, Error>) -> Void ) {
-        mark.createViewHolder { holder in
+    private func create(marker: MapMark, onFinish: @escaping (Result<Feature, Error>) -> Void ) {
+        marker.createViewHolder { holder in
             try! self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
-            let mapPosition = mark.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
+            let mapPosition = marker.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
             var feature = Feature(geometry: .point(Point(mapPosition)))
 
-            feature.identifier = FeatureIdentifier.string(mark.id)
+            feature.identifier = FeatureIdentifier.string(marker.id)
             feature.properties = JSONObject()
             feature.properties?[self.PROP_ICON] = .string(holder.imageId)
             feature.properties?[self.PROP_ID] = .string(holder.id)
             feature.properties?[self.PROP_FOCUSED] = .boolean(false)
-            feature.properties?[self.PROP_CLUSTERABLE] = .boolean(mark.clusterable)
-            feature.properties?[self.PROP_OFFSET_X] = .number(mark.offsetX)
-            feature.properties?[self.PROP_OFFSET_Y] = .number(mark.offsetY)
+            feature.properties?[self.PROP_CLUSTERABLE] = .boolean(marker.clusterable)
+            feature.properties?[self.PROP_OFFSET_X] = .number(marker.offsetX)
+            feature.properties?[self.PROP_OFFSET_Y] = .number(marker.offsetY)
 
-            feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == mark.floorLevelId)
+            feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == marker.floorLevelId)
 
             onFinish(.success(feature))
         }
     }
     
     //MARK: IMarkerController
-    func addMark(mark: MapMark) {
-        createMark(mark: mark) { result in
+    func add(marker: MapMark) {
+        create(marker: marker) { result in
             switch result {
             case .success(let feature):
                 if let visible = feature.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool, visible {
-                    self.markers[mark.id] = mark
-                    self.markerFeatures[mark.id] = feature
+                    self.markers[marker.id] = marker
+                    self.markerFeatures[marker.id] = feature
                 }
 
                 self.refreshMarkers()
@@ -209,20 +209,20 @@ class MarkerControllerImpl: IMarkerController {
         }
     }
     
-    func setMarks(marks: [MapMark]) {
+    func set(markers: [MapMark]) {
         clearMarkers()
         
-        if (marks.isEmpty) {
+        if (markers.isEmpty) {
             refreshMarkers()
         } else {
-            var numMarksToLoad = marks.count
+            var numMarksToLoad = markers.count
             
-            marks.forEach { mark in
-                createMark(mark: mark) { result in
+            markers.forEach { marker in
+                create(marker: marker) { result in
                     switch result {
                     case .success(let feature):
-                        self.markers[mark.id] = mark
-                        self.markerFeatures[mark.id] = feature
+                        self.markers[marker.id] = marker
+                        self.markerFeatures[marker.id] = feature
                         numMarksToLoad -= 1
                         if numMarksToLoad == 0 {
                             self.refreshMarkers()
@@ -235,28 +235,28 @@ class MarkerControllerImpl: IMarkerController {
         }
     }
     
-    func getMark(id: String) -> MapMark {
+    func get(markerId id: String) -> MapMark {
         markers[id]!
     }
     
-    func focusMark(id: String) {
+    func focus(markerId id: String) {
         markerFeatures[id]?.properties?[PROP_FOCUSED] = .boolean(true)
         //  markerFeatures[id]?.addBooleanProperty(PROP_FOCUSED, true)
         refreshMarkers()
         // animateMarkerFocused(true)
     }
     
-    func unfocusMarks() {
+    func unfocusMarkers() {
         //  markerFeatures.forEach({ $0.value.properties?[PROP_FOCUSED] = true })
         refreshMarkers()
         //  animateMarkerFocused(false)
     }
     
-    func removeMark(mark: MapMark) {
+    func remove(marker: MapMark) {
         
     }
     
-    func removeMark(id: String) {
+    func remove(markerId id: String) {
         markerFeatures.removeValue(forKey: id)
         markers.removeValue(forKey: id)
         refreshMarkers()
