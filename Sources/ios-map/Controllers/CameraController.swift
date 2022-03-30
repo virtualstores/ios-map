@@ -74,10 +74,10 @@ class CameraController: ICameraController {
         
         let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: -(width * 0.3), y: -(height * 0.8)), size: CGSize(width: width * 1.6, height: height * 2.0)))
         
-        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: mapBounds, minZoom: 0.0))
+        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: nil, minZoom: 0.0))
         
         let camera = mapView.mapboxMap.camera(for: mapBounds, padding: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0), bearing: 0, pitch: 0)
-        
+
         mapView.mapboxMap.setCamera(to: camera)
     }
     

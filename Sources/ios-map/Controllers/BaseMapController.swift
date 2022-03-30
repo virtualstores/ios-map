@@ -44,10 +44,8 @@ public class BaseMapController: IMapController {
         return marker
     }
 
-    public var path: IFoundationPathfinder {
-        guard let path = pathfinderController.pathfinder else { fatalError("path not loaded") }
-
-        return path
+    public var path: IPathfindingController {
+        pathfinderController
     }
     
     private var locationController: LocationController {
