@@ -24,7 +24,7 @@ class PathfinderController {
 
   private let PROP_VISIBLE = "mark_visible"
 
-  private let mapRepository: MapRepository
+  private var mapRepository: MapRepository
   private var cancellable = Set<AnyCancellable>()
 
   private var _onCurrentGoalChangePublisher: CurrentValueSubject<PathfindingGoal?, Never> = .init(nil)
@@ -114,7 +114,20 @@ class PathfinderController {
     self.mapRepository = mapRepository
   }
 
+  func onFloorChange(mapRepository: MapRepository) {
+    self.mapRepository = mapRepository
+    if filterGoals().isEmpty {
+      hidePathfinding()
+    } else {
+      showPathfinding()
+    }
+  }
+
   func initSources() {
+    guard _lineSourceHead == nil else {
+      return
+    }
+
     _lineSourceHead = GeoJSONSource()
     _lineSourceHead?.data = .empty
     _lineSourceBody = GeoJSONSource()
@@ -153,7 +166,6 @@ class PathfinderController {
     _circleLayerEnd?.source = SOURCE_ID_END
     _circleLayerEnd?.circleColor = .constant(StyleColor(.green))
     _circleLayerEnd?.visibility = .constant(.visible)
-
   }
 
   func onNewPosition(position: CGPoint) {
@@ -167,13 +179,13 @@ class PathfinderController {
       guard Date().timeIntervalSince(self.latestRefresh) > 1.0 else { return }
       self.latestRefresh = Date()
       Logger(verbosity: .info).log(message: "Pathfinder refresh, \(Date())")
-      try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
-      try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
-      try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
+      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
+      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
+      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
 
       let points = self.filterGoals().map { $0.position }
       let coordinates = points.map { $0.convertFromMeterToLatLng(converter: self.converter) }
-      try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.multiPoint(MultiPoint(coordinates))))
+      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.multiPoint(MultiPoint(coordinates))))
     }
   }
 
@@ -212,17 +224,17 @@ class PathfinderController {
   func onStyleUpdated() {
     initSources()
 
-    try! mapRepository.style.addSource(lineSourceHead, id: SOURCE_ID_HEAD)
-    try! mapRepository.style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("marker-layer"))
+    try? mapRepository.style.addSource(lineSourceHead, id: SOURCE_ID_HEAD)
+    try? mapRepository.style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("marker-layer"))
 
-    try! mapRepository.style.addSource(lineSourceBody, id: SOURCE_ID_BODY)
-    try! mapRepository.style.addLayer(lineLayerBody, layerPosition: LayerPosition.below(LAYER_ID_HEAD))
+    try? mapRepository.style.addSource(lineSourceBody, id: SOURCE_ID_BODY)
+    try? mapRepository.style.addLayer(lineLayerBody, layerPosition: LayerPosition.below(LAYER_ID_HEAD))
 
-    try! mapRepository.style.addSource(lineSourceTail, id: SOURCE_ID_TAIL)
-    try! mapRepository.style.addLayer(lineLayerTail, layerPosition: LayerPosition.below(LAYER_ID_BODY))
+    try? mapRepository.style.addSource(lineSourceTail, id: SOURCE_ID_TAIL)
+    try? mapRepository.style.addLayer(lineLayerTail, layerPosition: LayerPosition.below(LAYER_ID_BODY))
 
-    try! mapRepository.style.addSource(lineSourceEnd, id: SOURCE_ID_END)
-    try! mapRepository.style.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
+    try? mapRepository.style.addSource(lineSourceEnd, id: SOURCE_ID_END)
+    try? mapRepository.style.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
   }
     
     deinit {
@@ -271,7 +283,7 @@ extension PathfinderController: IPathfindingController {
 
   private func filterGoals() -> [PathfindingGoal] {
     // TODO: Filter on floorlevel
-    allGoals.values.map { $0 }
+    allGoals.values.filter { $0.floorLevelId == mapRepository.floorLevelId }.map { $0 }
   }
 
   func remove(goal: PathfindingGoal, completion: @escaping (() -> Void)) {

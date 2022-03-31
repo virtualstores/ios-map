@@ -23,23 +23,19 @@ public class BaseMapController: IMapController {
     }
 
     public var location: ILocation {
-        guard let location = internalLocation else {
-            fatalError("Map not loadede")
-        }
+        guard let location = internalLocation else { fatalError("Map not loaded") }
 
         return location
     }
 
     public var camera: ICameraController {
-        guard let camera = cameraController else {
-            fatalError("Camera not loadede")
-        }
+        guard let camera = cameraController else { fatalError("Camera not loaded") }
 
         return camera
     }
     
     public var marker: IMarkerController {
-        guard let marker = markerController else { fatalError("marker not loaded")}
+        guard let marker = markerController else { fatalError("marker not loaded") }
         
         return marker
     }
@@ -49,7 +45,7 @@ public class BaseMapController: IMapController {
     }
     
     private var locationController: LocationController {
-        guard let internalLocation = internalLocation else { fatalError("location not loaded")}
+        guard let internalLocation = internalLocation else { fatalError("location not loaded") }
         
         return internalLocation
     }
@@ -74,8 +70,12 @@ public class BaseMapController: IMapController {
         markerController = MarkerControllerImpl(mapRepository: mapRepository)
     }
 
-    public func setup(pathfinder: IFoundationPathfinder) {
-      pathfinderController.pathfinder = pathfinder
+    public func setup(pathfinder: IFoundationPathfinder, changedFloor: Bool = false) {
+        if changedFloor {
+            markerController?.onFloorChange(mapRepository: mapRepository)
+            pathfinderController.onFloorChange(mapRepository: mapRepository)
+        }
+        pathfinderController.pathfinder = pathfinder
     }
 
     /// Map loader which will receave all needed  setup information

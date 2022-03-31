@@ -49,7 +49,7 @@ class MarkerControllerImpl: IMarkerController {
     let CLUSTER_TRIGGER_RADIUS = 60000
     let CLUSTER_ICON_SIZE = 64
     
-    private let mapRepository: MapRepository
+    private var mapRepository: MapRepository
     
     private var mapOptions: VSFoundation.MapOptions {
         mapRepository.mapOptions
@@ -88,6 +88,11 @@ class MarkerControllerImpl: IMarkerController {
     
     public init(mapRepository: MapRepository) {
         self.mapRepository = mapRepository
+    }
+
+    func onFloorChange(mapRepository: MapRepository) {
+        self.mapRepository = mapRepository
+        self.refreshMarkers()
     }
     
     public func setup(with mapOptions: VSFoundation.MapOptions, floorLevelId: Int64?) {
@@ -161,7 +166,11 @@ class MarkerControllerImpl: IMarkerController {
     }
     
     private func refreshMarkers() {
-        let markers = markerFeatures.map({ $0.value })
+//        if let visible = feature.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool, visible {
+//
+//        }
+        let filteredMarkers = markerFeatures.filter { ($0.value.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool ?? false) == true }
+        let markers = filteredMarkers.map({ $0.value })
 
         //var unclusterableMarkers = markerFeatures.filter({ $0.key != PROP_CLUSTERABLE } )
         
@@ -172,7 +181,7 @@ class MarkerControllerImpl: IMarkerController {
     
     private func create(marker: MapMark, completion: @escaping (Result<Feature, Error>) -> Void ) {
         marker.createViewHolder { holder in
-            try! self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
+            try? self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
             let mapPosition = marker.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
             var feature = Feature(geometry: .point(Point(mapPosition)))
 
@@ -196,11 +205,9 @@ class MarkerControllerImpl: IMarkerController {
         create(marker: marker) { result in
             switch result {
             case .success(let feature):
-                if let visible = feature.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool, visible {
-                    self.markers[marker.id] = marker
-                    self.markerFeatures[marker.id] = feature
-                }
 
+                self.markers[marker.id] = marker
+                self.markerFeatures[marker.id] = feature
                 self.refreshMarkers()
             default: break
             }
@@ -279,8 +286,9 @@ extension MarkerControllerImpl {
     func onStyleUpdated() {
         initSources()
 
-        try! mapRepository.style.addSource(markerSource, id: SOURCE_ID)
-        try! mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.default)
+        try? mapRepository.style.addSource(markerSource, id: SOURCE_ID)
+        try? mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.below("puck"))
+        try? mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.default)
     }
     
     func onMapUpdated() {
