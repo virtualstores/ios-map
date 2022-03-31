@@ -184,6 +184,7 @@ class PathfinderController {
         self?._currentGoal = goal.asPathfindeingGoal
         self?._onCurrentGoalChangePublisher.send(goal.asPathfindeingGoal)
       }).store(in: &cancellable)
+      
     pathfinder?.sortedGoalUpdatedPublisher
       .compactMap { $0 }
       .sink(receiveValue: { [weak self] (goals) in
@@ -191,6 +192,7 @@ class PathfinderController {
         self?._sortedGoals = pathfindingGoals
         self?._onSortedGoalChangePublisher.send(pathfindingGoals)
       }).store(in: &cancellable)
+      
     pathfinder?.pathUpdatedPublisher
       .compactMap { $0 }
       .sink(receiveValue: { [weak self] (path) in
@@ -199,6 +201,11 @@ class PathfinderController {
         self?.currentHeadPath = modified.head
         self?.currentBodyPath = modified.body
         self?.currentTailPath = modified.tail
+      }).store(in: &cancellable)
+
+    pathfinder?.hasGoal
+      .sink(receiveValue: { [weak self] (hasGoal) in
+
       }).store(in: &cancellable)
   }
 
@@ -217,6 +224,10 @@ class PathfinderController {
     try! mapRepository.style.addSource(lineSourceEnd, id: SOURCE_ID_END)
     try! mapRepository.style.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
   }
+    
+    deinit {
+        cancellable.removeAll()
+    }
 }
 
 extension PathfinderController: IPathfindingController {
@@ -324,71 +335,3 @@ extension PathfinderController: IPathfindingController {
   }
 }
 
-public struct PathfinderLine {
-  let id: String
-  let position: [CLLocationCoordinate2D]
-}
-
-extension Path {
-  func convertFromPixelToMapCoordinate(converter: ICoordinateConverter) -> (head: [CLLocationCoordinate2D], body: [CLLocationCoordinate2D], tail: [CLLocationCoordinate2D]) {
-    return (
-      head: self.head.map { $0.fromPixelToLatLng(converter: converter) },
-      body: self.body.map { $0.fromPixelToLatLng(converter: converter) },
-      tail: self.tail.map { $0.fromPixelToLatLng(converter: converter) }
-    )
-  }
-}
-
-extension PathfindingGoal.GoalType {
-  var asGoalType: Goal.GoalType {
-    switch self {
-    case .start: return .start
-    case .target: return .target
-    case .end: return .end
-    }
-  }
-}
-extension PathfindingGoal {
-  var asGoal: Goal {
-    Goal(id: id, position: position, data: data, type: type.asGoalType, floorLevelId: floorLevelId)
-  }
-}
-
-extension Goal.GoalType {
-  var asPathfindingGoalType: PathfindingGoal.GoalType {
-    switch self {
-    case .start: return .start
-    case .target: return .target
-    case .end: return .end
-    }
-  }
-}
-extension Goal {
-  var asPathfindeingGoal: PathfindingGoal {
-    PathfindingGoal(id: id, position: position, data: data, type: type.asPathfindingGoalType, floorLevelId: floorLevelId)
-  }
-
-  func convertFromMeterToPixel(converter: ICoordinateConverter) -> Goal {
-    let height = converter.heightInMeters
-    let x = converter.convertFromMetersToPixels(input: position.x)
-    let y: Double
-    if height > 0.0 {
-      y = converter.convertFromMetersToPixels(input: height - position.y)
-    } else {
-      y = converter.convertFromMetersToPixels(input: position.y)
-    }
-    return Goal(id: id, position: CGPoint(x: x, y: y), data: data, type: type, floorLevelId: floorLevelId)
-  }
-
-  func convertFromPixelToMeter(converter: ICoordinateConverter) -> Goal {
-    let height = converter.heightInPixels
-    let x = converter.convertFromPixelsToMeters(input: position.x)
-    let y: Double
-    if height > 0.0 {
-      y = converter.convertFromPixelsToMeters(input: height - position.y)
-    } else {
-      y = converter.convertFromPixelsToMeters(input: position.y)
-    }
-    return Goal(id: id, position: CGPoint(x: x, y: y), data: data, type: type, floorLevelId: floorLevelId)
-  }
-}
