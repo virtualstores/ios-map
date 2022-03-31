@@ -27,6 +27,9 @@ class PathfinderController {
   private let mapRepository: MapRepository
   private var cancellable = Set<AnyCancellable>()
 
+  private var _onCurrentGoalChangePublisher: CurrentValueSubject<PathfindingGoal?, Never> = .init(nil)
+  private var _onSortedGoalChangePublisher: CurrentValueSubject<[PathfindingGoal], Never> = .init([])
+
   private var _currentGoal: PathfindingGoal?
   private var _sortedGoals: [PathfindingGoal] = []
   private var allGoals: [String : PathfindingGoal] = [:]
@@ -148,13 +151,13 @@ class PathfinderController {
 
     _circleLayerEnd = CircleLayer(id: LAYER_ID_END)
     _circleLayerEnd?.source = SOURCE_ID_END
-    _circleLayerEnd?.circleColor = .constant(StyleColor(.blue))
+    _circleLayerEnd?.circleColor = .constant(StyleColor(.green))
     _circleLayerEnd?.visibility = .constant(.visible)
 
   }
 
   func onNewPosition(position: CGPoint) {
-    pathfinder?.setUserPosition(position: position.fromMeterToPixel(converter: converter).flipY(converter: converter))
+    updateLocation(newLocation: position)
     refreshLines()
   }
 
@@ -167,6 +170,10 @@ class PathfinderController {
       try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
       try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
       try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
+
+      let points = self.filterGoals().map { $0.position }
+      let coordinates = points.map { $0.convertFromMeterToLatLng(converter: self.converter) }
+      try! self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.multiPoint(MultiPoint(coordinates))))
     }
   }
 
@@ -175,11 +182,14 @@ class PathfinderController {
       .compactMap { $0 }
       .sink(receiveValue: { [weak self] (goal) in
         self?._currentGoal = goal.asPathfindeingGoal
+        self?._onCurrentGoalChangePublisher.send(goal.asPathfindeingGoal)
       }).store(in: &cancellable)
     pathfinder?.sortedGoalUpdatedPublisher
       .compactMap { $0 }
       .sink(receiveValue: { [weak self] (goals) in
-        self?._sortedGoals = goals.map { $0.asPathfindeingGoal }
+        let pathfindingGoals = goals.map { $0.asPathfindeingGoal }
+        self?._sortedGoals = pathfindingGoals
+        self?._onSortedGoalChangePublisher.send(pathfindingGoals)
       }).store(in: &cancellable)
     pathfinder?.pathUpdatedPublisher
       .compactMap { $0 }
@@ -189,10 +199,6 @@ class PathfinderController {
         self?.currentHeadPath = modified.head
         self?.currentBodyPath = modified.body
         self?.currentTailPath = modified.tail
-      }).store(in: &cancellable)
-    pathfinder?.hasGoal
-      .sink(receiveValue: { [weak self] (hasGoal) in
-
       }).store(in: &cancellable)
   }
 
@@ -214,17 +220,13 @@ class PathfinderController {
 }
 
 extension PathfinderController: IPathfindingController {
-  var state: State {
-    .hidden
-  }
+  var state: State { .hidden }
 
-  var currentGoal: PathfindingGoal? {
-    _currentGoal
-  }
-
-  var sortedGoals: [PathfindingGoal] {
-    _sortedGoals
-  }
+  var onCurrentGoalChangePublisher: CurrentValueSubject<PathfindingGoal?, Never> { _onCurrentGoalChangePublisher }
+  var onSortedGoalChangePublisher: CurrentValueSubject<[PathfindingGoal], Never> { _onSortedGoalChangePublisher }
+  
+  var currentGoal: PathfindingGoal? { _currentGoal }
+  var sortedGoals: [PathfindingGoal] { _sortedGoals }
 
   func add(goal: PathfindingGoal, completion: @escaping (() -> Void)) {
     allGoals[goal.id] = goal
@@ -274,35 +276,39 @@ extension PathfinderController: IPathfindingController {
   }
 
   func showPathfinding() {
-
-  }
-
-  func showTail() {
-
-  }
-
-  func showBody() {
-
+    showHead()
+    showBody()
+    showTail()
   }
 
   func showHead() {
+    _lineLayerHead?.visibility = .constant(.visible)
+  }
 
+  func showBody() {
+    _lineLayerBody?.visibility = .constant(.visible)
+  }
+
+  func showTail() {
+    _lineLayerTail?.visibility = .constant(.visible)
   }
 
   func hidePathfinding() {
-
-  }
-
-  func hideTail() {
-
-  }
-
-  func hideBody() {
-
+    hideHead()
+    hideBody()
+    hideTail()
   }
 
   func hideHead() {
+    _lineLayerHead?.visibility = .constant(.none)
+  }
 
+  func hideBody() {
+    _lineLayerBody?.visibility = .constant(.none)
+  }
+
+  func hideTail() {
+    _lineLayerTail?.visibility = .constant(.none)
   }
 
   func hasGoal() -> Bool {
@@ -310,19 +316,11 @@ extension PathfinderController: IPathfindingController {
   }
 
   func updateLocation(newLocation: CGPoint) {
-
+    pathfinder?.setUserPosition(position: newLocation.fromMeterToPixel(converter: converter).flipY(converter: converter))
   }
 
   func forceRefresh(withTSP: Bool, overridePosition: CGPoint?, completion: @escaping (() -> Void)) {
     pathfinder?.forceRefresh(withTSP: withTSP, overridePosition: overridePosition, completion: completion)
-  }
-
-  func addListener(listener: IPathfindingControllerListener) {
-
-  }
-
-  func removeListener(listener: IPathfindingControllerListener) {
-
   }
 }
 
