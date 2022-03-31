@@ -9,7 +9,7 @@ import Foundation
 import VSFoundation
 import CoreLocation
 
-public extension Path {
+extension Path {
   func convertFromPixelToMapCoordinate(converter: ICoordinateConverter) -> (head: [CLLocationCoordinate2D], body: [CLLocationCoordinate2D], tail: [CLLocationCoordinate2D]) {
     return (
       head: self.head.map { $0.fromPixelToLatLng(converter: converter) },
