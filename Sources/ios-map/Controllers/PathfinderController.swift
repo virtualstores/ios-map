@@ -178,7 +178,6 @@ class PathfinderController {
     DispatchQueue.main.async {
       guard Date().timeIntervalSince(self.latestRefresh) > 1.0 else { return }
       self.latestRefresh = Date()
-      Logger(verbosity: .info).log(message: "Pathfinder refresh, \(Date())")
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
@@ -282,7 +281,6 @@ extension PathfinderController: IPathfindingController {
   }
 
   private func filterGoals() -> [PathfindingGoal] {
-    // TODO: Filter on floorlevel
     allGoals.values.filter { $0.floorLevelId == mapRepository.floorLevelId }.map { $0 }
   }
 

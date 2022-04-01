@@ -14,13 +14,8 @@ import Combine
 
 public class BaseMapController: IMapController {
     public var mapDataLoadedPublisher: CurrentValueSubject<Bool?, MapControllerError> = .init(false)
-    
-    public var dragDidBegin: (() -> Void)? = nil
-    public var dragDidEnd: (() -> Void)? = nil
 
-    var mapData: MapData {
-        mapRepository.mapData
-    }
+    var mapData: MapData { mapRepository.mapData }
 
     public var location: ILocation {
         guard let location = internalLocation else { fatalError("Map not loaded") }
@@ -40,9 +35,9 @@ public class BaseMapController: IMapController {
         return marker
     }
 
-    public var path: IPathfindingController {
-        pathfinderController
-    }
+    public var path: IPathfindingController { pathfinderController }
+
+    public var zone: IZoneController { zoneController }
     
     private var locationController: LocationController {
         guard let internalLocation = internalLocation else { fatalError("location not loaded") }
@@ -50,11 +45,12 @@ public class BaseMapController: IMapController {
         return internalLocation
     }
 
-    //Controllers for helpin baseController to setup map
+    //Controllers for helping baseController to setup map
     var internalLocation: LocationController?
     var cameraController: CameraController?
     var markerController: MarkerControllerImpl?
     var pathfinderController: PathfinderController
+    var zoneController: ZoneController
     
     private var mapRepository = MapRepository()
     private var mapViewContainer: TT2MapView
@@ -67,15 +63,18 @@ public class BaseMapController: IMapController {
         
         mapRepository.mapOptions = mapOptions
         pathfinderController = PathfinderController(mapRepository: mapRepository)
+        zoneController = ZoneController(mapRepository: mapRepository)
         markerController = MarkerControllerImpl(mapRepository: mapRepository)
     }
 
-    public func setup(pathfinder: IFoundationPathfinder, changedFloor: Bool = false) {
+    public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], changedFloor: Bool = false) {
         if changedFloor {
             markerController?.onFloorChange(mapRepository: mapRepository)
             pathfinderController.onFloorChange(mapRepository: mapRepository)
+            zoneController.onFloorChange(mapRepository: mapRepository)
         }
         pathfinderController.pathfinder = pathfinder
+        zoneController.setup(zones: zones)
     }
 
     /// Map loader which will receave all needed  setup information
@@ -113,6 +112,7 @@ public class BaseMapController: IMapController {
         setupCamera(with: .free)
         markerController?.onStyleUpdated()
         pathfinderController.onStyleUpdated()
+        zoneController.onStyleUpdated()
 
         mapViewContainer.mapView.location.overrideLocationProvider(with: locationController)
         mapViewContainer.mapView.location.locationProvider.startUpdatingLocation()
@@ -162,6 +162,7 @@ public class BaseMapController: IMapController {
         location.updateUserLocation(newLocation: mapPosition, std: Float(mapStd))
         cameraController?.updateLocation(with: mapPosition, direction: direction)
         pathfinderController.onNewPosition(position: position)
+        zoneController.updateLocation(newLocation: position)
     }
 
     var direction: Double = .zero

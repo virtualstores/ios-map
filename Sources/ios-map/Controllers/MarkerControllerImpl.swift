@@ -166,9 +166,6 @@ class MarkerControllerImpl: IMarkerController {
     }
     
     private func refreshMarkers() {
-//        if let visible = feature.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool, visible {
-//
-//        }
         let filteredMarkers = markerFeatures.filter { ($0.value.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool ?? false) == true }
         let markers = filteredMarkers.map({ $0.value })
 
