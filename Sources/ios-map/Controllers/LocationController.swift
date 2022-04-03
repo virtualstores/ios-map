@@ -37,9 +37,9 @@ class LocationController: ILocation, LocationProvider {
         
         // The CGPoint here is converted to LatLng, where x = lat, y = lng
         let accuracy = CLLocationAccuracy(Float(std * 1.645))
-        
+
         let location = CLLocation(coordinate: newLocation, altitude: 1.0, horizontalAccuracy: 3000 * accuracy, verticalAccuracy: 1.0, timestamp: Date())
-        
+
         delegate?.locationProvider(self, didUpdateLocations: [location])
     }
     

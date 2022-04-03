@@ -95,15 +95,11 @@ class MarkerControllerImpl: IMarkerController {
         self.refreshMarkers()
     }
     
-    public func setup(with mapOptions: VSFoundation.MapOptions, floorLevelId: Int64?) {
-        
-    }
-    
     func initSources() {
         _markerSource = GeoJSONSource()
-        _markerSource?.cluster = mapOptions.cluster.clusteringEnabled
-        _markerSource?.clusterRadius = mapOptions.cluster.clusterRadius
-        _markerSource?.clusterMaxZoom = mapOptions.cluster.clusterMaxZoom
+//        _markerSource?.cluster = mapOptions.cluster.clusteringEnabled
+//        _markerSource?.clusterRadius = mapOptions.cluster.clusterRadius
+//        _markerSource?.clusterMaxZoom = mapOptions.cluster.clusterMaxZoom
         
 //        _markerSource?.clusterProperties = [
 //            PROP_CLUSTER_IDS : Expression(.accumulated) {

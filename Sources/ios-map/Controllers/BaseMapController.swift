@@ -15,8 +15,6 @@ import Combine
 public class BaseMapController: IMapController {
     public var mapDataLoadedPublisher: CurrentValueSubject<Bool?, MapControllerError> = .init(false)
 
-    var mapData: MapData { mapRepository.mapData }
-
     public var location: ILocation {
         guard let location = internalLocation else { fatalError("Map not loaded") }
 
@@ -44,6 +42,9 @@ public class BaseMapController: IMapController {
         
         return internalLocation
     }
+
+    private var mapData: MapData { mapRepository.mapData }
+    private var mapView: MapView { mapViewContainer.mapView }
 
     //Controllers for helping baseController to setup map
     var internalLocation: LocationController?
@@ -83,16 +84,17 @@ public class BaseMapController: IMapController {
 
         guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
 
-        mapViewContainer.mapStyle = self.mapRepository.mapOptions.style
+        mapViewContainer.mapStyle = self.mapRepository.mapOptions.mapStyle
         mapViewContainer.addLoadingView()
-        mapRepository.map = mapViewContainer.mapView.mapboxMap
-        mapViewContainer.mapView.mapboxMap.loadStyleURI(styleURI) { [weak self] result in
+        mapRepository.map = mapView.mapboxMap
+        mapView.mapboxMap.loadStyleURI(styleURI) { [weak self] result in
             switch result {
             case .success(let style):
                 self?.onStyleLoaded(style: style)
                 self?.mapViewContainer.dismissLoadingScreen()
             case let .failure(error):
-                Logger.init(verbosity: .debug).log(message: "The map failed to load the style: \(error)")
+                Logger.init(verbosity: .debug).log(message: "The map failed to load the style: \(error.localizedDescription)")
+                self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
             }
         }
     }
@@ -114,26 +116,31 @@ public class BaseMapController: IMapController {
         pathfinderController.onStyleUpdated()
         zoneController.onStyleUpdated()
 
-        mapViewContainer.mapView.location.overrideLocationProvider(with: locationController)
-        mapViewContainer.mapView.location.locationProvider.startUpdatingLocation()
-        mapViewContainer.mapView.location.locationProvider.startUpdatingHeading()
-        mapViewContainer.mapView.location.options.activityType = .other
-        mapViewContainer.mapView.location.options.puckBearingSource = .heading
+        mapView.location.overrideLocationProvider(with: locationController)
+        mapView.location.locationProvider.startUpdatingLocation()
+        mapView.location.locationProvider.startUpdatingHeading()
+        mapView.location.options.activityType = .other
+        mapView.location.options.puckBearingSource = .heading
+
+        mapView.ornaments.compassView.isHidden = true
+        mapView.ornaments.scaleBarView.isHidden = true
+        mapView.ornaments.attributionButton.isHidden = true
+        mapView.ornaments.logoView.isHidden = true
 
         styleLoaded = true
-        locationController.setOptions(options: mapViewContainer.mapView.location.options)
+        locationController.setOptions(options: mapView.location.options)
         mapDataLoadedPublisher.send(true)
     }
 
       private func setupUserMarker() {
           guard styleLoaded else { return }
-          let image = mapRepository.mapOptions.style.userMarkerImage
+          let image = UIImage(named: "userMarker")//mapRepository.mapOptions.mapStyle.userMarkerImage
 
           if let userMarkerImage = image {
               let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)
-              mapViewContainer.mapView.location.options.puckType = .puck2D(config)
+              mapView.location.options.puckType = .puck2D(config)
           } else {
-              mapViewContainer.mapView.location.options.puckType = .puck2D()
+              mapView.location.options.puckType = .puck2D()
           }
 
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -142,13 +149,13 @@ public class BaseMapController: IMapController {
       }
 
     private func setupCamera(with mode: CameraModes) {
-        cameraController = CameraController(mapView: mapViewContainer.mapView, mapRepository: mapRepository)
+        cameraController = CameraController(mapView: mapView, mapRepository: mapRepository)
 
         if let controller = cameraController {
             controller.resetCameraToMapBounds()
             controller.updateCameraMode(with: mode)
-            mapViewContainer.mapView.location.addLocationConsumer(newConsumer: controller)
-            mapViewContainer.mapView.gestures.delegate = cameraController
+            mapView.location.addLocationConsumer(newConsumer: controller)
+            mapView.gestures.delegate = cameraController
         }
     }
 
@@ -178,9 +185,9 @@ public class BaseMapController: IMapController {
     public func stop() {
         mapViewContainer.addLoadingView()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            self.mapViewContainer.mapView.location.options.puckType = .none
-            self.mapViewContainer.mapView.location.locationProvider.stopUpdatingLocation()
-            self.mapViewContainer.mapView.location.locationProvider.stopUpdatingHeading()
+            self.mapView.location.options.puckType = .none
+            self.mapView.location.locationProvider.stopUpdatingLocation()
+            self.mapView.location.locationProvider.stopUpdatingHeading()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self.mapViewContainer.dismissLoadingScreen()
             }

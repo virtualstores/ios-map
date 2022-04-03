@@ -22,7 +22,18 @@ public class BaseMapMark: MapMark {
     public var offsetX: Double
     public var offsetY: Double
     
-    public init(id: String, position: CGPoint, floorLevelId: Int64?, triggerRadius: Double?, data: UIImage?, clusterable: Bool, deletable: Bool, defaultVisibility: Bool, offsetX: Double, offsetY: Double) {
+    public init(
+        id: String,
+        position: CGPoint,
+        floorLevelId: Int64?,
+        triggerRadius: Double?,
+        data: UIImage?,
+        clusterable: Bool,
+        deletable: Bool,
+        defaultVisibility: Bool,
+        offsetX: Double,
+        offsetY: Double
+    ) {
         self.id = id
         self.position = position
         self.floorLevelId = floorLevelId

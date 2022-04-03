@@ -58,33 +58,52 @@ class CameraController: ICameraController {
             self.actualCameraMode = FreeMode()
         case .containMap:
             self.actualCameraMode = ContainMapMode(with: self)
-        case .threeDimensional(let zoomLevel, _):
-            let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 10)
+        case .threeDimensional(let zoomLevel):
+            let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8)
             
             self.actualCameraMode = mode
         }
     }
     
     func resetCameraToMapBounds() {
-        let width = mapRepository.mapData.converter.convertFromMetersToMapCoordinate(input: mapRepository.mapData.rtlsOptions.widthInMeters )
-        
-        let heightInMeters = mapRepository.mapData.rtlsOptions.widthInMeters > mapRepository.mapData.rtlsOptions.heightInMeters ? mapRepository.mapData.rtlsOptions.widthInMeters : mapRepository.mapData.rtlsOptions.heightInMeters
-        
-        let height = mapRepository.mapData.converter.convertFromMetersToMapCoordinate(input: heightInMeters)
-        
-        let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: -(width * 0.3), y: -(height * 0.8)), size: CGSize(width: width * 1.6, height: height * 2.0)))
-        
-        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: nil, minZoom: 0.0))
-        
-        let camera = mapView.mapboxMap.camera(for: mapBounds, padding: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0), bearing: 0, pitch: 0)
+        let rtls = mapRepository.mapData.rtlsOptions
+        let converter = mapRepository.mapData.converter
 
-        mapView.mapboxMap.setCamera(to: camera)
+        let width = converter.convertFromMetersToMapCoordinate(input: rtls.widthInMeters)
+        let height = converter.convertFromMetersToMapCoordinate(input: rtls.heightInMeters)
+
+        let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height)))
+        let cameraPadding = converter.convertFromMetersToMapCoordinate(input: 10)
+        let cameraBounds: CoordinateBounds
+
+        if rtls.widthInMeters > rtls.heightInMeters {
+            let modifiedMapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 1.5)), size: CGSize(width: width, height: height * 4.0)))
+            let sw = modifiedMapBounds.southwest
+            let ne = modifiedMapBounds.northeast
+            cameraBounds = CoordinateBounds(
+                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
+                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
+            )
+        } else {
+            let sw = mapBounds.southwest
+            let ne = mapBounds.northeast
+            cameraBounds = CoordinateBounds(
+                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
+                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
+            )
+        }
+        
+        try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
+
+        let padding = 20.0
+        let camera = mapView.mapboxMap.camera(for: mapBounds, padding: UIEdgeInsets(top: padding, left: padding, bottom: padding, right: padding), bearing: 0, pitch: 0)
+
+        mapView.camera.ease(to: camera, duration: 0.4)
     }
     
     func resetCameraToMapMode() {
         if let cameraMode = requestedCameraMode, !(actualCameraMode is ContainMapMode) {
             self.createCameraMode(for: cameraMode)
-            
         } else {
             self.resetCameraToMapBounds()
             DispatchQueue.main.asyncAfter(deadline: .now() + revertCameraInterval) {
@@ -116,6 +135,7 @@ extension CameraController: LocationConsumer {
 extension CameraController: GestureManagerDelegate {
     public func gestureManager(_ gestureManager: GestureManager, didBegin gestureType: GestureType) {
         self.createCameraMode(for: .free)
+        self.revertCameraModeTimer?.invalidate()
         Logger.init(verbosity: .debug).log(message: "didBegin")
     }
     
