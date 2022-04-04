@@ -1,3 +1,3 @@
-# ios-map
+# VSMap
 
 A description of this package.
