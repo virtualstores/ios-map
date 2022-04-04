@@ -136,15 +136,15 @@ extension CameraController: GestureManagerDelegate {
     public func gestureManager(_ gestureManager: GestureManager, didBegin gestureType: GestureType) {
         self.createCameraMode(for: .free)
         self.revertCameraModeTimer?.invalidate()
-        Logger.init(verbosity: .debug).log(message: "didBegin")
+//        Logger.init(verbosity: .debug).log(message: "didBegin")
     }
     
     public func gestureManager(_ gestureManager: GestureManager, didEnd gestureType: GestureType, willAnimate: Bool) {
         self.revertCameraModeAfter(interval: revertCameraInterval)
-        Logger.init(verbosity: .debug).log(message: "didEnd")
+//        Logger.init(verbosity: .debug).log(message: "didEnd")
     }
     
     public func gestureManager(_ gestureManager: GestureManager, didEndAnimatingFor gestureType: GestureType) {
-        Logger.init(verbosity: .debug).log(message: "didEndAnimatingFor")
+//        Logger.init(verbosity: .debug).log(message: "didEndAnimatingFor")
     }
 }

@@ -28,9 +28,9 @@ public class BaseMapController: IMapController {
     }
     
     public var marker: IMarkerController {
-        guard let marker = markerController else { fatalError("marker not loaded") }
+//        guard let marker = markerController else { fatalError("marker not loaded") }
         
-        return marker
+        return markerController
     }
 
     public var path: IPathfindingController { pathfinderController }
@@ -49,7 +49,7 @@ public class BaseMapController: IMapController {
     //Controllers for helping baseController to setup map
     var internalLocation: LocationController?
     var cameraController: CameraController?
-    var markerController: MarkerControllerImpl?
+    var markerController: MarkerControllerImpl
     var pathfinderController: PathfinderController
     var zoneController: ZoneController
     
@@ -70,7 +70,7 @@ public class BaseMapController: IMapController {
 
     public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], changedFloor: Bool = false) {
         if changedFloor {
-            markerController?.onFloorChange(mapRepository: mapRepository)
+            markerController.onFloorChange(mapRepository: mapRepository)
             pathfinderController.onFloorChange(mapRepository: mapRepository)
             zoneController.onFloorChange(mapRepository: mapRepository)
         }
@@ -112,7 +112,7 @@ public class BaseMapController: IMapController {
         mapRepository.style = style
 
         setupCamera(with: .free)
-        markerController?.onStyleUpdated()
+        markerController.onStyleUpdated()
         pathfinderController.onStyleUpdated()
         zoneController.onStyleUpdated()
 
@@ -127,26 +127,34 @@ public class BaseMapController: IMapController {
         mapView.ornaments.attributionButton.isHidden = true
         mapView.ornaments.logoView.isHidden = true
 
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(gesture:)))
+        mapView.addGestureRecognizer(tapGesture)
+
         styleLoaded = true
         locationController.setOptions(options: mapView.location.options)
         mapDataLoadedPublisher.send(true)
     }
 
-      private func setupUserMarker() {
-          guard styleLoaded else { return }
-          let image = UIImage(named: "userMarker")//mapRepository.mapOptions.mapStyle.userMarkerImage
+    @objc func handleTap(gesture: UITapGestureRecognizer) {
+        let location = gesture.location(in: mapView)
+        markerController.onClick(point: location)
+    }
 
-          if let userMarkerImage = image {
-              let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)
-              mapView.location.options.puckType = .puck2D(config)
-          } else {
-              mapView.location.options.puckType = .puck2D()
-          }
+    private func setupUserMarker() {
+        guard styleLoaded else { return }
+        let image = UIImage(named: "userMarker")//mapRepository.mapOptions.mapStyle.userMarkerImage
 
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-              self.mapViewContainer.dismissLoadingScreen()
-          }
-      }
+        if let userMarkerImage = image {
+            let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)
+            mapView.location.options.puckType = .puck2D(config)
+        } else {
+            mapView.location.options.puckType = .puck2D()
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.mapViewContainer.dismissLoadingScreen()
+        }
+    }
 
     private func setupCamera(with mode: CameraModes) {
         cameraController = CameraController(mapView: mapView, mapRepository: mapRepository)

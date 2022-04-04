@@ -28,24 +28,24 @@ public class TT2MapView: UIView {
             guard let data = event.data as? [String: Any],
                   let type = data["type"]
             else {
-                Logger.init(verbosity: .debug).log(message: "styleDataLoaded success")
+//                Logger.init(verbosity: .debug).log(message: "styleDataLoaded success")
                 return
             }
             
-            Logger.init(verbosity: .debug).log(message: "The map has finished loading style data of type = \(type)")
+//            Logger.init(verbosity: .debug).log(message: "The map has finished loading style data of type = \(type)")
         }
         
-        mapView.mapboxMap.onNext(.styleLoaded) { (event) in
-            Logger.init(verbosity: .debug).log(message: "The map has finished loading style ... Event = \(event)")
-        }
-        
-        mapView.mapboxMap.onNext(.renderFrameFinished) { (event) in
-            Logger.init(verbosity: .debug).log(message: "he map has finished loading style ... Event =  \(event)")
-        }
-        
-        mapView.mapboxMap.onNext(.mapLoaded) {  (event) in
-            Logger.init(verbosity: .debug).log(message: "The map has finished loading ... Event =  \(event)")
-        }
+//        mapView.mapboxMap.onNext(.styleLoaded) { (event) in
+//            Logger.init(verbosity: .debug).log(message: "The map has finished loading style ... Event = \(event)")
+//        }
+//
+//        mapView.mapboxMap.onNext(.renderFrameFinished) { (event) in
+//            Logger.init(verbosity: .debug).log(message: "he map has finished loading style ... Event =  \(event)")
+//        }
+//
+//        mapView.mapboxMap.onNext(.mapLoaded) {  (event) in
+//            Logger.init(verbosity: .debug).log(message: "The map has finished loading ... Event =  \(event)")
+//        }
     }
 
     private var loadingView: UIView?
