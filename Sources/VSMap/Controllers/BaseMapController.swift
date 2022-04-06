@@ -107,7 +107,7 @@ public class BaseMapController: IMapController {
     }
 
     private func onStyleLoaded(style: Style) {
-        internalLocation = LocationController()
+        internalLocation = LocationController(mapRepository: mapRepository)
 
         mapRepository.style = style
 
@@ -171,11 +171,10 @@ public class BaseMapController: IMapController {
         guard let position = newLocation, let std = std else { return }
 
         let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
-        let convertedStd = mapData.converter.convertFromMetersToPixels(input: Double(std))
-        let mapStd = mapData.converter.convertFromPixelsToMapCoordinate(input: convertedStd)
 
-        location.updateUserLocation(newLocation: mapPosition, std: Float(mapStd))
+        location.updateUserLocation(newLocation: mapPosition, std: std)
         cameraController?.updateLocation(with: mapPosition, direction: direction)
+        markerController.updateLocation(newLocation: position, precision: std)
         pathfinderController.onNewPosition(position: position)
         zoneController.updateLocation(newLocation: position)
     }

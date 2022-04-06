@@ -152,28 +152,82 @@ class ZoneController {
     _zoneLineSource = GeoJSONSource()
     _zoneLineSource?.data = .empty
 
+    let textSizeStops: [Double: Double] = [
+      // If the map is at zoom level 12 or below,
+      // set circle radius to 2
+      0: mapOptions.zoneStyle.textStyle.textMinSize,
+      7: (mapOptions.zoneStyle.textStyle.textMinSize + mapOptions.zoneStyle.textStyle.textMaxSize) / 2,
+      // If the map is at zoom level 22 or above,
+      // set circle radius to 180
+      12: mapOptions.zoneStyle.textStyle.textMaxSize
+    ]
+
     _zoneTextLayer = SymbolLayer(id: LAYER_ZONE_TEXT)
     _zoneTextLayer?.source = SOURCE_ZONE_TEXT
     _zoneTextLayer?.textField = .expression(Exp(.get) { PROP_ZONE_NAME })
-    _zoneTextLayer?.textSize = .constant(100) // TODO: Ask CJ what to do
-    _zoneTextLayer?.textColor = .constant(StyleColor(.cyan)) // TODO: Ask CJ what to do
+    _zoneTextLayer?.textSize = .expression(
+      // Produce a continuous, smooth series of values
+      // between pairs of input and output values
+      Exp(.interpolate) {
+        // Set the interpolation type
+        Exp(.exponential) { 1.75 }
+        // Get current zoom level
+        Exp(.zoom)
+        // Use the stops defined above
+        textSizeStops
+      }
+    )
+    _zoneTextLayer?.textColor = .expression(
+      Exp(.switchCase) {
+        Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }
+        mapOptions.zoneStyle.textStyle.textColorSelected
+        mapOptions.zoneStyle.textStyle.textColor
+      }
+    )
     _zoneTextLayer?.textOpacity = .constant(mapOptions.zoneStyle.textStyle.textOpacity)
     _zoneTextLayer?.textIgnorePlacement = .constant(mapOptions.zoneStyle.textStyle.textIgnorePlacement)
     _zoneTextLayer?.textAnchor = .constant(TextAnchor(rawValue: mapOptions.zoneStyle.textStyle.textAnchor) ?? .bottom)
     _zoneTextLayer?.textOffset = .constant(mapOptions.zoneStyle.textStyle.textOffset)
     _zoneTextLayer?.textAllowOverlap = .constant(mapOptions.zoneStyle.textStyle.textAllowOverLap)
     _zoneTextLayer?.textFont = .constant([mapOptions.zoneStyle.textStyle.textFont])
+    _zoneTextLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }
 
     _zoneFillLayer = FillLayer(id: LAYER_ZONE_FILL)
     _zoneFillLayer?.source = SOURCE_ZONE_FILL
-    _zoneFillLayer?.fillColor = .expression(Exp(.get) { PROP_ZONE_FILL_COLOR })
+    _zoneFillLayer?.fillColor = .expression(
+      Exp(.switchCase) {
+        Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }
+        Exp(.get) { PROP_ZONE_FILL_COLOR_SELECTED }
+        Exp(.get) { PROP_ZONE_FILL_COLOR }
+      }
+    )
+    _zoneFillLayer?.fillOpacity = .constant(mapOptions.zoneStyle.fillStyle.alpha)
+    _zoneFillLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }
 
+    let lineWidthStops: [Double : Double] = [
+      0.0: mapOptions.zoneStyle.lineStyle.lineWidth,
+      7.5: mapOptions.zoneStyle.lineStyle.lineWidth,
+      10.0: mapOptions.zoneStyle.lineStyle.lineWidth * 5
+    ]
     _zoneLineLayer = LineLayer(id: LAYER_ZONE_LINE)
     _zoneLineLayer?.source = SOURCE_ZONE_LINE
-    _zoneLineLayer?.lineColor = .expression(Exp(.get) { PROP_ZONE_LINE_COLOR })
+    _zoneLineLayer?.lineColor = .expression(
+      Exp(.switchCase) {
+        Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }
+        Exp(.get) { PROP_ZONE_LINE_COLOR_SELECTED }
+        Exp(.get) { PROP_ZONE_LINE_COLOR }
+      }
+    )
     _zoneLineLayer?.lineCap = .constant(.round)
     _zoneLineLayer?.lineJoin = .constant(.round)
-    _zoneLineLayer?.lineWidth = .constant(5.0)
+    _zoneLineLayer?.lineWidth = .expression(
+      Exp(.interpolate) {
+        Exp(.exponential) { 1.75 }
+        Exp(.zoom)
+        lineWidthStops
+      }
+    )
+    _zoneLineLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }
   }
 
   func refreshZones() {
@@ -256,47 +310,46 @@ extension ZoneController: IZoneController {
   }
 
   func show(zone: Zone) {
-    guard let zone = zones.first(where: { $0 == zone }) else { return }
     zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
     zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
     zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+    refreshZones()
   }
 
   func hide(zone: Zone) {
-    guard let zone = zones.first(where: { $0 == zone }) else { return }
     zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
     zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
     zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+    refreshZones()
   }
 
   func select(zone: Zone) {
-    guard let zone = zones.first(where: { $0 == zone }) else { return }
     zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
     zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
     zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
+    refreshZones()
   }
 
   func select(zones: [Zone]) {
-
+    refreshZones()
   }
 
   func deselect(zone: Zone) {
-    guard let zone = zones.first(where: { $0 == zone }) else { return }
     zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
     zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
     zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
+    refreshZones()
   }
 
   func deselect(zones: [Zone]) {
-
+    refreshZones()
   }
 
   func deselectAll() {
-
+    refreshZones()
   }
 
   func updateLocation(newLocation: CGPoint) {
-    refreshZones()
   }
 
   func setInAndOutDataListener(completion: @escaping ([String]) -> Void) {

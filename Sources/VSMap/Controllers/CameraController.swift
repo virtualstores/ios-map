@@ -106,7 +106,7 @@ class CameraController: ICameraController {
             self.createCameraMode(for: cameraMode)
         } else {
             self.resetCameraToMapBounds()
-            DispatchQueue.main.asyncAfter(deadline: .now() + revertCameraInterval) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.resetCameraToMapBounds()
             }
         }

@@ -134,53 +134,99 @@ class PathfinderController {
     _lineSourceEnd = GeoJSONSource()
     _lineSourceEnd?.data = .empty
 
-
     _lineLayerHead = LineLayer(id: LAYER_ID_HEAD)
     _lineLayerHead?.source = SOURCE_ID_HEAD
-    _lineLayerHead?.lineCap = .constant(.round)
-    _lineLayerHead?.lineJoin = .constant(.round)
-    _lineLayerHead?.lineWidth = .constant(5.0)
+    _lineLayerHead?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleHead.lineCap) ?? .round)
+    _lineLayerHead?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleHead.lineJoin) ?? .round)
     _lineLayerHead?.lineColor = .constant(StyleColor(pathfindingStyle.pathStyleHead.lineColor))
     _lineLayerHead?.visibility = .constant(.visible)
+    _lineLayerHead?.lineWidth = .expression(
+      Exp(.interpolate) {
+        Exp(.exponential) { 2 }
+        Exp(.zoom)
+        [
+          0.0: pathfindingStyle.pathStyleHead.lineWidth,
+          7.5: pathfindingStyle.pathStyleHead.lineWidth * 2.5,
+          10.0: pathfindingStyle.pathStyleHead.lineWidth * 5
+        ]
+      }
+    )
 
     _lineLayerBody = LineLayer(id: LAYER_ID_BODY)
     _lineLayerBody?.source = SOURCE_ID_BODY
-    _lineLayerBody?.lineCap = .constant(.round)
-    _lineLayerBody?.lineJoin = .constant(.round)
-    _lineLayerBody?.lineWidth = .constant(5.0)
+    _lineLayerBody?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
+    _lineLayerBody?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
     _lineLayerBody?.lineColor = .constant(StyleColor(pathfindingStyle.pathStyleBody.lineColor))
     _lineLayerBody?.visibility = .constant(.visible)
+    _lineLayerBody?.lineWidth = .expression(
+      Exp(.interpolate) {
+        Exp(.exponential) { 2 }
+        Exp(.zoom)
+        [
+          0.0: pathfindingStyle.pathStyleBody.lineWidth,
+          7.5: pathfindingStyle.pathStyleBody.lineWidth * 2.5,
+          10.0: pathfindingStyle.pathStyleBody.lineWidth * 5
+        ]
+      }
+    )
 
     _lineLayerTail = LineLayer(id: LAYER_ID_TAIL)
     _lineLayerTail?.source = SOURCE_ID_TAIL
-    _lineLayerTail?.lineCap = .constant(.round)
-    _lineLayerTail?.lineJoin = .constant(.round)
-    _lineLayerTail?.lineWidth = .constant(5.0)
+    _lineLayerTail?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleTail.lineCap) ?? .round)
+    _lineLayerTail?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleTail.lineJoin) ?? .round)
     _lineLayerTail?.lineColor = .constant(StyleColor(pathfindingStyle.pathStyleTail.lineColor))
     _lineLayerTail?.visibility = .constant(.visible)
+    _lineLayerTail?.lineWidth = .expression(
+      Exp(.interpolate) {
+        Exp(.exponential) { 2 }
+        Exp(.zoom)
+        [
+          0.0: pathfindingStyle.pathStyleTail.lineWidth,
+          7.5: pathfindingStyle.pathStyleTail.lineWidth * 2.5,
+          10.0: pathfindingStyle.pathStyleTail.lineWidth * 5
+        ]
+      }
+    )
 
     _circleLayerEnd = CircleLayer(id: LAYER_ID_END)
     _circleLayerEnd?.source = SOURCE_ID_END
     _circleLayerEnd?.circleColor = .constant(StyleColor(pathfindingStyle.lineEndStyle?.color ?? pathfindingStyle.pathStyleHead.lineColor))
     _circleLayerEnd?.visibility = .constant(.visible)
-  }
-
-  func onNewPosition(position: CGPoint) {
-    updateLocation(newLocation: position)
-    refreshLines()
+    _circleLayerEnd?.circleRadius = .expression(
+      Exp(.interpolate) {
+        Exp(.exponential) { 2 }
+        Exp(.zoom)
+        [
+          7.5: pathfindingStyle.pathStyleHead.lineWidth * 2,
+          10.0: pathfindingStyle.pathStyleHead.lineWidth * 4
+        ]
+      }
+    )
   }
 
   var latestRefresh: Date = Date()
+  func onNewPosition(position: CGPoint) {
+    updateLocation(newLocation: position)
+    guard Date().timeIntervalSince(self.latestRefresh) > 1.0 else { return }
+    refreshLines()
+  }
+
   private func refreshLines() {
-      guard Date().timeIntervalSince(self.latestRefresh) > 1.0 else { return }
+      guard !allGoals.isEmpty else {
+          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
+          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
+          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
+          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.lineString(LineString([]))))
+          return
+      }
+
       self.latestRefresh = Date()
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
 
-      let points = self.filterGoals().map { $0.position }
-      let coordinates = points.map { $0.convertFromMeterToLatLng(converter: self.converter) }
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.multiPoint(MultiPoint(coordinates))))
+      guard let coordinate = self.currentHeadPath.last else { return }
+      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.point(Point(coordinate))))
   }
 
   func bindPublishers() {
@@ -272,7 +318,10 @@ extension PathfinderController: IPathfindingController {
 //      }
 //    })
 
-    pathfinder?.set(goals: filterGoals().map { $0.asGoal.convertFromMeterToPixel(converter: converter) }, completion: completion)
+    pathfinder?.set(goals: filterGoals().map { $0.asGoal.convertFromMeterToPixel(converter: converter) }) {
+      self.refreshLines()
+      completion()
+    }
   }
 
   private func filterGoals() -> [PathfindingGoal] {
@@ -281,14 +330,17 @@ extension PathfinderController: IPathfindingController {
 
   func remove(goal: PathfindingGoal, completion: @escaping (() -> Void)) {
     pathfinder?.remove(goal: goal.asGoal, completion: completion)
+    refreshLines()
   }
 
   func remove(goals: [PathfindingGoal], completion: @escaping (() -> Void)) {
     pathfinder?.remove(goals: goals.map { $0.asGoal }, completion: completion)
+    refreshLines()
   }
 
   func popGoal() {
     pathfinder?.popGoal()
+    refreshLines()
   }
 
   func showPathfinding() {

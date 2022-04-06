@@ -23,8 +23,12 @@ class LocationController: ILocation, LocationProvider {
     public var headingOrientation: CLDeviceOrientation
     
     weak var delegate: LocationProviderDelegate?
+
+    private var mapRepository: MapRepository
+    private var converter: ICoordinateConverter { mapRepository.mapData.converter }
     
-    public init() {
+    public init(mapRepository: MapRepository) {
+        self.mapRepository = mapRepository
         userMarkVisibility = .visible
         authorizationStatus = .authorizedAlways
         accuracyAuthorization = .fullAccuracy
@@ -35,11 +39,11 @@ class LocationController: ILocation, LocationProvider {
     // MARK: ILocation implementation
     public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Float?) {
         guard let std = std else { return }
-        
-        // The CGPoint here is converted to LatLng, where x = lat, y = lng
-        let accuracy = CLLocationAccuracy(Float(std * 1.645))
 
-        let location = CLLocation(coordinate: newLocation, altitude: 1.0, horizontalAccuracy: 3000 * accuracy, verticalAccuracy: 1.0, timestamp: Date())
+        let convertedStd = converter.convertFromMetersToMapMeters(input: Double(std * 1.645))
+        let accuracy = CLLocationAccuracy(convertedStd)
+
+        let location = CLLocation(coordinate: newLocation, altitude: 1.0, horizontalAccuracy: accuracy, verticalAccuracy: 1.0, timestamp: Date())
 
         delegate?.locationProvider(self, didUpdateLocations: [location])
     }

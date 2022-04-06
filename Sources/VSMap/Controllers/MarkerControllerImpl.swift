@@ -44,8 +44,8 @@ class MarkerControllerImpl: IMarkerController {
     let ID_START = "start"
     let ID_STOP = "stop"
     
-    let TRANSPARENCY_TRIGGER_RADIUS = 25000
-    let CLUSTER_TRIGGER_RADIUS = 60000
+    let TRANSPARENCY_TRIGGER_RADIUS: Double = 25000
+    let CLUSTER_TRIGGER_RADIUS: Double = 60000
     let CLUSTER_ICON_SIZE = 64
 
     var allMarkers: [MapMark] = []
@@ -56,6 +56,7 @@ class MarkerControllerImpl: IMarkerController {
     private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
     private var mapMarkOptions: VSFoundation.MapOptions.MapMark { mapOptions.mapMark }
     private var floorLevelId: Int64 { mapRepository.floorLevelId }
+    private var converter: ICoordinateConverter { mapRepository.mapData.converter }
     
     private var markers = [String: MapMark]()
     private var markerFeatures = [String : Feature]()
@@ -152,6 +153,7 @@ class MarkerControllerImpl: IMarkerController {
     private func clearMarkers() {
         markers.removeAll()
         markerFeatures.removeAll()
+        refreshMarkers()
     }
     
     private func refreshMarkers() {
@@ -254,13 +256,14 @@ class MarkerControllerImpl: IMarkerController {
     }
     
     func unfocusMarkers() {
-        //  markerFeatures.forEach({ $0.value.properties?[PROP_FOCUSED] = true })
+        markerFeatures.forEach({ markerFeatures[$0.key]?.properties?[PROP_FOCUSED] = .boolean(false) })
         refreshMarkers()
-        //  animateMarkerFocused(false)
     }
     
     func remove(marker: MapMark) {
-        
+        markerFeatures.removeValue(forKey: marker.id)
+        markers.removeValue(forKey: marker.id)
+        refreshMarkers()
     }
     
     func remove(markerId id: String) {
@@ -270,8 +273,32 @@ class MarkerControllerImpl: IMarkerController {
     }
     
     func updateLocation(newLocation: CGPoint, precision: Float) {
-        
+      let coordinate = newLocation.convertFromMeterToLatLng(converter: converter)
+      markers.forEach { (key, value) in
+        if self.setTransparentMarkers(coordinate: coordinate, marker: value) {
+          refreshMarkers()
+        }
+      }
     }
+
+  func setTransparentMarkers(coordinate: CLLocationCoordinate2D, marker: MapMark) -> Bool {
+    var update = false
+    guard let feature = markerFeatures[marker.id] else { return update }
+    let markerCoordinate = marker.position.convertFromMeterToLatLng(converter: converter)
+    let distance = markerCoordinate.distance(to: coordinate)
+    if distance < TRANSPARENCY_TRIGGER_RADIUS {
+      let adjustedCoordinate = CLLocationCoordinate2D(latitude: coordinate.latitude - 0.3, longitude: coordinate.longitude)
+      let transparency = markerCoordinate.distance(to: adjustedCoordinate)
+      let trans = min(max(transparency / (TRANSPARENCY_TRIGGER_RADIUS * 1.5), 0.4), 1.0)
+      markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(trans)
+      update = true
+    } else {
+      guard let transparency = feature.properties?[PROP_TRANSPARENCY]??.rawValue as? Double, transparency != 1.0, !update else { return update }
+      markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(1.0)
+      update = true
+    }
+    return update
+  }
     
     func setStartLocationsVisibility(isVisible: Bool) {
         isStartLocationsVisible = isVisible
