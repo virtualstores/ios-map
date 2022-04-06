@@ -102,13 +102,10 @@ class PathfinderController {
     }
   }
 
-  var style: Style {
-    mapRepository.style
-  }
-
-  var converter: ICoordinateConverter {
-    mapRepository.mapData.converter
-  }
+  var style: Style { mapRepository.style }
+  var converter: ICoordinateConverter { mapRepository.mapData.converter }
+  var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
+  var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
 
   init(mapRepository: MapRepository) {
     self.mapRepository = mapRepository
@@ -143,7 +140,7 @@ class PathfinderController {
     _lineLayerHead?.lineCap = .constant(.round)
     _lineLayerHead?.lineJoin = .constant(.round)
     _lineLayerHead?.lineWidth = .constant(5.0)
-    _lineLayerHead?.lineColor = .constant(StyleColor(.red))
+    _lineLayerHead?.lineColor = .constant(StyleColor(pathfindingStyle.pathStyleHead.lineColor))
     _lineLayerHead?.visibility = .constant(.visible)
 
     _lineLayerBody = LineLayer(id: LAYER_ID_BODY)
@@ -151,7 +148,7 @@ class PathfinderController {
     _lineLayerBody?.lineCap = .constant(.round)
     _lineLayerBody?.lineJoin = .constant(.round)
     _lineLayerBody?.lineWidth = .constant(5.0)
-    _lineLayerBody?.lineColor = .constant(StyleColor(.blue))
+    _lineLayerBody?.lineColor = .constant(StyleColor(pathfindingStyle.pathStyleBody.lineColor))
     _lineLayerBody?.visibility = .constant(.visible)
 
     _lineLayerTail = LineLayer(id: LAYER_ID_TAIL)
@@ -159,12 +156,12 @@ class PathfinderController {
     _lineLayerTail?.lineCap = .constant(.round)
     _lineLayerTail?.lineJoin = .constant(.round)
     _lineLayerTail?.lineWidth = .constant(5.0)
-    _lineLayerTail?.lineColor = .constant(StyleColor(.purple))
+    _lineLayerTail?.lineColor = .constant(StyleColor(pathfindingStyle.pathStyleTail.lineColor))
     _lineLayerTail?.visibility = .constant(.visible)
 
     _circleLayerEnd = CircleLayer(id: LAYER_ID_END)
     _circleLayerEnd?.source = SOURCE_ID_END
-    _circleLayerEnd?.circleColor = .constant(StyleColor(.green))
+    _circleLayerEnd?.circleColor = .constant(StyleColor(pathfindingStyle.lineEndStyle?.color ?? pathfindingStyle.pathStyleHead.lineColor))
     _circleLayerEnd?.visibility = .constant(.visible)
   }
 
@@ -175,7 +172,6 @@ class PathfinderController {
 
   var latestRefresh: Date = Date()
   private func refreshLines() {
-    DispatchQueue.main.async {
       guard Date().timeIntervalSince(self.latestRefresh) > 1.0 else { return }
       self.latestRefresh = Date()
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
@@ -185,7 +181,6 @@ class PathfinderController {
       let points = self.filterGoals().map { $0.position }
       let coordinates = points.map { $0.convertFromMeterToLatLng(converter: self.converter) }
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.multiPoint(MultiPoint(coordinates))))
-    }
   }
 
   func bindPublishers() {
@@ -236,9 +231,9 @@ class PathfinderController {
     try? mapRepository.style.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
   }
     
-    deinit {
-        cancellable.removeAll()
-    }
+  deinit {
+    cancellable.removeAll()
+  }
 }
 
 extension PathfinderController: IPathfindingController {

@@ -68,14 +68,14 @@ public class BaseMapController: IMapController {
         markerController = MarkerControllerImpl(mapRepository: mapRepository)
     }
 
-    public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], changedFloor: Bool = false) {
+    public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, changedFloor: Bool = false) {
         if changedFloor {
             markerController.onFloorChange(mapRepository: mapRepository)
             pathfinderController.onFloorChange(mapRepository: mapRepository)
             zoneController.onFloorChange(mapRepository: mapRepository)
         }
         pathfinderController.pathfinder = pathfinder
-        zoneController.setup(zones: zones)
+        zoneController.setup(zones: zones, sharedProperties: sharedProperties)
     }
 
     /// Map loader which will receave all needed  setup information

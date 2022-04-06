@@ -121,13 +121,13 @@ class MarkerControllerImpl: IMarkerController {
         _markerLayer = SymbolLayer(id: MARKER_LAYER_ID)
         _markerLayer?.source = SOURCE_ID
         
-        _markerLayer?.iconImage = .expression(Exp(.get){ PROP_ICON })
+        _markerLayer?.iconImage = .expression(Exp(.get) { PROP_ICON })
         _markerLayer?.iconAnchor = .constant(IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom)
         _markerLayer?.iconOffset = .constant([mapMarkOptions.offsetX, mapMarkOptions.offsetY]) // use marker offset
         
         _markerLayer?.iconSize = .constant(mapMarkOptions.scaleSize)  //options.mapMark.scaleSize
         _markerLayer?.iconAllowOverlap = .constant(true)
-        _markerLayer?.iconOpacity = .expression(Exp(.get){ PROP_TRANSPARENCY })
+        _markerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
         _markerLayer?.visibility = .constant(.visible)
         _markerLayer?.filter = Exp(.eq) { Exp(.get) { PROP_FOCUSED }; false }
 
@@ -140,7 +140,7 @@ class MarkerControllerImpl: IMarkerController {
 
         _focusedMarkerLayer?.iconSize = .constant(mapMarkOptions.focusScaleSize)  //options.mapMark.scaleSize
         _focusedMarkerLayer?.iconAllowOverlap = .constant(true)
-        _focusedMarkerLayer?.iconOpacity = .expression(Exp(.get){ PROP_TRANSPARENCY })
+        _focusedMarkerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
         _focusedMarkerLayer?.visibility = .constant(.visible)
         _focusedMarkerLayer?.filter = Exp(.eq) { Exp(.get) { PROP_FOCUSED }; true }
     }
@@ -288,6 +288,7 @@ extension MarkerControllerImpl {
         try? mapRepository.style.addSource(markerSource, id: SOURCE_ID)
         try? mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.below("puck"))
         try? mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.default)
+        try? mapRepository.style.addLayer(focusedMarkerLayer, layerPosition: LayerPosition.below("puck"))
         try? mapRepository.style.addLayer(focusedMarkerLayer, layerPosition: LayerPosition.default)
     }
 }

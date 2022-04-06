@@ -29,6 +29,7 @@ class LocationController: ILocation, LocationProvider {
         authorizationStatus = .authorizedAlways
         accuracyAuthorization = .fullAccuracy
         headingOrientation = .portrait
+        updateUserLocation(newLocation: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0), std: 0.0)
     }
     
     // MARK: ILocation implementation

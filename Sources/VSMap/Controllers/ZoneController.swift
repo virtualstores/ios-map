@@ -31,6 +31,8 @@ class ZoneController {
   private let PROP_ZONE_LINE_COLOR_SELECTED = "prop-zone-line-color-selected"
 
   private var mapRepository: MapRepository
+  private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
+  private var sharedProperties: SharedZoneProperties?
   private var zones: [Zone] = []
 
   private var zoneTextFeatures: [String : Feature] = [:]
@@ -95,27 +97,49 @@ class ZoneController {
     self.mapRepository = mapRepository
   }
 
-  func setup(zones: [Zone]) {
+  func setup(zones: [Zone], sharedProperties: SharedZoneProperties?) {
+    self.sharedProperties = sharedProperties
     zones.forEach { (zone) in
       if let point = zone.navigationPoint {
         let coordinate = CLLocationCoordinate2D(latitude: point.y, longitude: point.x)
         var textFeature = Feature(geometry: .point(Point(coordinate)))
         textFeature.properties = JSONObject()
+        textFeature.properties?[PROP_ZONE_ID] = .string(zone.id)
+        textFeature.properties?[PROP_ZONE_PARENT_ID] = .string(zone.parent?.id ?? "")
+        textFeature.properties?[PROP_ZONE_NAME] = .string(zone.name)
+        textFeature.properties?[PROP_SELECTED] = .boolean(false)
         textFeature.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
         self.zoneTextFeatures[zone.id] = textFeature
       }
 
       let polygon = zone.polygon.map { CLLocationCoordinate2D(latitude: $0.y, longitude: $0.x) }
+      let fillColor = zone.properties.fillColor ?? sharedProperties?.fillColor ?? mapOptions.zoneStyle.fillStyle.color.asHex
+      let fillColorSelected = zone.properties.fillColorSelected ?? sharedProperties?.fillColorSelected ?? mapOptions.zoneStyle.fillStyle.colorSelected.asHex
+
       var fillFeature = Feature(geometry: .polygon(Polygon([polygon])))
       fillFeature.properties = JSONObject()
-      var selected = fillFeature.properties?[PROP_SELECTED]
-      selected = .boolean(false)
-      fillFeature.properties?[PROP_ZONE_VISIBLE] = selected
+      fillFeature.properties?[PROP_ZONE_ID] = .string(zone.id)
+      fillFeature.properties?[PROP_ZONE_PARENT_ID] = .string(zone.parent?.id ?? "")
+      fillFeature.properties?[PROP_ZONE_NAME] = .string(zone.name)
+      fillFeature.properties?[PROP_SELECTED] = .boolean(false)
+      fillFeature.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+      fillFeature.properties?[PROP_ZONE_FILL_COLOR] = .string(fillColor)
+      fillFeature.properties?[PROP_ZONE_FILL_COLOR_SELECTED] = .string(fillColorSelected)
+
       self.zoneFillFeatures[zone.id] = fillFeature
+
+      let lineColor = zone.properties.lineColor ?? sharedProperties?.lineColor ?? mapOptions.zoneStyle.lineStyle.lineColor.asHex
+      let lineColorSelected = zone.properties.lineColorSelected ?? sharedProperties?.lineColorSelected ?? mapOptions.zoneStyle.lineStyle.lineColorSelected.asHex
 
       var lineFeature = Feature(geometry: .polygon(Polygon([polygon])))
       lineFeature.properties = JSONObject()
+      lineFeature.properties?[PROP_ZONE_ID] = .string(zone.id)
+      lineFeature.properties?[PROP_ZONE_PARENT_ID] = .string(zone.parent?.id ?? "")
+      lineFeature.properties?[PROP_ZONE_NAME] = .string(zone.name)
+      lineFeature.properties?[PROP_SELECTED] = .boolean(false)
       lineFeature.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+      lineFeature.properties?[PROP_ZONE_LINE_COLOR] = .string(lineColor)
+      lineFeature.properties?[PROP_ZONE_LINE_COLOR_SELECTED] = .string(lineColorSelected)
       self.zoneLineFeatures[zone.id] = lineFeature
     }
   }
@@ -130,15 +154,23 @@ class ZoneController {
 
     _zoneTextLayer = SymbolLayer(id: LAYER_ZONE_TEXT)
     _zoneTextLayer?.source = SOURCE_ZONE_TEXT
-    _zoneTextLayer?.textColor = .constant(StyleColor(.cyan))
+    _zoneTextLayer?.textField = .expression(Exp(.get) { PROP_ZONE_NAME })
+    _zoneTextLayer?.textSize = .constant(100) // TODO: Ask CJ what to do
+    _zoneTextLayer?.textColor = .constant(StyleColor(.cyan)) // TODO: Ask CJ what to do
+    _zoneTextLayer?.textOpacity = .constant(mapOptions.zoneStyle.textStyle.textOpacity)
+    _zoneTextLayer?.textIgnorePlacement = .constant(mapOptions.zoneStyle.textStyle.textIgnorePlacement)
+    _zoneTextLayer?.textAnchor = .constant(TextAnchor(rawValue: mapOptions.zoneStyle.textStyle.textAnchor) ?? .bottom)
+    _zoneTextLayer?.textOffset = .constant(mapOptions.zoneStyle.textStyle.textOffset)
+    _zoneTextLayer?.textAllowOverlap = .constant(mapOptions.zoneStyle.textStyle.textAllowOverLap)
+    _zoneTextLayer?.textFont = .constant([mapOptions.zoneStyle.textStyle.textFont])
 
     _zoneFillLayer = FillLayer(id: LAYER_ZONE_FILL)
     _zoneFillLayer?.source = SOURCE_ZONE_FILL
-    _zoneFillLayer?.fillColor = .constant(StyleColor(.magenta))
+    _zoneFillLayer?.fillColor = .expression(Exp(.get) { PROP_ZONE_FILL_COLOR })
 
     _zoneLineLayer = LineLayer(id: LAYER_ZONE_LINE)
     _zoneLineLayer?.source = SOURCE_ZONE_LINE
-    _zoneLineLayer?.lineColor = .constant(StyleColor(.darkText))
+    _zoneLineLayer?.lineColor = .expression(Exp(.get) { PROP_ZONE_LINE_COLOR })
     _zoneLineLayer?.lineCap = .constant(.round)
     _zoneLineLayer?.lineJoin = .constant(.round)
     _zoneLineLayer?.lineWidth = .constant(5.0)
@@ -157,11 +189,9 @@ class ZoneController {
     let lineZones = filteredLineZones.map({ $0.value })
     let lineCollection = FeatureCollection(features: lineZones)
 
-    DispatchQueue.main.async {
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ZONE_TEXT, geoJSON: .featureCollection(textsCollection))
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ZONE_FILL, geoJSON: .featureCollection(fillCollection))
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ZONE_LINE, geoJSON: .featureCollection(lineCollection))
-    }
+    try? self.style.updateGeoJSONSource(withId: self.SOURCE_ZONE_TEXT, geoJSON: .featureCollection(textsCollection))
+    try? self.style.updateGeoJSONSource(withId: self.SOURCE_ZONE_FILL, geoJSON: .featureCollection(fillCollection))
+    try? self.style.updateGeoJSONSource(withId: self.SOURCE_ZONE_LINE, geoJSON: .featureCollection(lineCollection))
   }
 
   func onStyleUpdated() {
@@ -170,11 +200,13 @@ class ZoneController {
     try? mapRepository.style.addSource(zoneTextSource, id: SOURCE_ZONE_TEXT)
     try? mapRepository.style.addLayer(zoneTextLayer, layerPosition: LayerPosition.default)
 
-    try? mapRepository.style.addSource(zoneFillSource, id: SOURCE_ZONE_FILL)
-    try? mapRepository.style.addLayer(zoneFillLayer, layerPosition: LayerPosition.default)
-
     try? mapRepository.style.addSource(zoneLineSource, id: SOURCE_ZONE_LINE)
-    try? mapRepository.style.addLayer(zoneLineLayer, layerPosition: LayerPosition.default)
+    try? mapRepository.style.addLayer(zoneLineLayer, layerPosition: LayerPosition.below(DEFAULT_STYLE_WALLS_LAYER))
+
+    try? mapRepository.style.addSource(zoneFillSource, id: SOURCE_ZONE_FILL)
+    try? mapRepository.style.addLayer(zoneFillLayer, layerPosition: LayerPosition.below(LAYER_ZONE_LINE))
+
+    refreshZones()
   }
 }
 
@@ -225,15 +257,23 @@ extension ZoneController: IZoneController {
 
   func show(zone: Zone) {
     guard let zone = zones.first(where: { $0 == zone }) else { return }
-
+    zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+    zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+    zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
   }
 
   func hide(zone: Zone) {
     guard let zone = zones.first(where: { $0 == zone }) else { return }
+    zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+    zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+    zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
   }
 
   func select(zone: Zone) {
     guard let zone = zones.first(where: { $0 == zone }) else { return }
+    zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
+    zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
+    zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
   }
 
   func select(zones: [Zone]) {
@@ -242,6 +282,9 @@ extension ZoneController: IZoneController {
 
   func deselect(zone: Zone) {
     guard let zone = zones.first(where: { $0 == zone }) else { return }
+    zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
+    zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
+    zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
   }
 
   func deselect(zones: [Zone]) {
