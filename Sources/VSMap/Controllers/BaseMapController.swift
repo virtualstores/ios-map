@@ -142,7 +142,7 @@ public class BaseMapController: IMapController {
 
     private func setupUserMarker() {
         guard styleLoaded else { return }
-        let image = UIImage(named: "userMarker")//mapRepository.mapOptions.mapStyle.userMarkerImage
+        let image = UIImage(named: "userMarker", in: .module, compatibleWith: nil)//mapRepository.mapOptions.mapStyle.userMarkerImage
 
         if let userMarkerImage = image {
             let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)

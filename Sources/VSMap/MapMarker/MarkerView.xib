@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="20037" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_1" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="20020"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="Y4z-V5-FSY" customClass="MarkerView" customModule="VSMap">
+            <rect key="frame" x="0.0" y="0.0" width="48" height="58"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <subviews>
+                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="icon-map-marker" translatesAutoresizingMaskIntoConstraints="NO" id="GDx-kY-F7k">
+                    <rect key="frame" x="0.0" y="0.0" width="48" height="58"/>
+                    <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                </imageView>
+                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="vm6-4C-zzC">
+                    <rect key="frame" x="8" y="8" width="32" height="32"/>
+                    <accessibility key="accessibilityConfiguration">
+                        <bool key="isElement" value="YES"/>
+                    </accessibility>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="32" id="9rI-NL-pY1"/>
+                        <constraint firstAttribute="height" constant="32" id="ngg-WP-V76"/>
+                    </constraints>
+                </imageView>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4JE-MB-Qb4">
+                    <rect key="frame" x="24" y="12" width="0.0" height="0.0"/>
+                    <fontDescription key="fontDescription" type="boldSystem" pointSize="17"/>
+                    <nil key="textColor"/>
+                    <nil key="highlightedColor"/>
+                </label>
+            </subviews>
+            <viewLayoutGuide key="safeArea" id="Jgq-H7-IJt"/>
+            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+            <constraints>
+                <constraint firstItem="4JE-MB-Qb4" firstAttribute="centerX" secondItem="Y4z-V5-FSY" secondAttribute="centerX" id="3Gw-Hi-9Kw"/>
+                <constraint firstAttribute="trailing" secondItem="GDx-kY-F7k" secondAttribute="trailing" id="3YY-Q8-C95"/>
+                <constraint firstItem="4JE-MB-Qb4" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" constant="12" id="64A-GI-Ccr"/>
+                <constraint firstItem="GDx-kY-F7k" firstAttribute="leading" secondItem="Y4z-V5-FSY" secondAttribute="leading" id="MHu-qI-5wA"/>
+                <constraint firstAttribute="bottom" secondItem="GDx-kY-F7k" secondAttribute="bottom" id="MO1-4Y-OuA"/>
+                <constraint firstItem="vm6-4C-zzC" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" constant="8" id="Xm1-Gk-JGC"/>
+                <constraint firstItem="GDx-kY-F7k" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" id="cZe-Ok-vAc"/>
+                <constraint firstItem="vm6-4C-zzC" firstAttribute="centerX" secondItem="Y4z-V5-FSY" secondAttribute="centerX" id="pra-AU-dt7"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="imageView" destination="vm6-4C-zzC" id="egr-Qj-Jf5"/>
+                <outlet property="label" destination="4JE-MB-Qb4" id="M8E-5x-O48"/>
+            </connections>
+            <point key="canvasLocation" x="63.768115942028992" y="131.91964285714286"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="icon-map-marker" width="48" height="58"/>
+    </resources>
+</document>

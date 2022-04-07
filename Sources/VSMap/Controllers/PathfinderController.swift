@@ -280,6 +280,10 @@ class PathfinderController {
   deinit {
     cancellable.removeAll()
   }
+
+  private func checkIfSwaplocationIsNeeded(goal: PathfindingGoal)  {
+
+  }
 }
 
 extension PathfinderController: IPathfindingController {
