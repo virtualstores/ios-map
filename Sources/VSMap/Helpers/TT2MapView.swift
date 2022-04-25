@@ -25,12 +25,12 @@ public class TT2MapView: UIView {
         self.addSubview(mapView)
         
         mapView.mapboxMap.onEvery(.styleDataLoaded) { (event) in
-            guard let data = event.data as? [String: Any],
-                  let type = data["type"]
-            else {
+//            guard let data = event.data as? [String: Any],
+//                  let type = data["type"]
+//            else {
 //                Logger.init(verbosity: .debug).log(message: "styleDataLoaded success")
-                return
-            }
+//                return
+//            }
             
 //            Logger.init(verbosity: .debug).log(message: "The map has finished loading style data of type = \(type)")
         }

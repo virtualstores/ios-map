@@ -10,7 +10,6 @@ import MapboxMaps
 import VSFoundation
 
 class ZoneController {
-
   private let DEFAULT_STYLE_WALLS_LAYER = "walls"
   private let SOURCE_ZONE_LINE = "zone-line-source"
   private let SOURCE_ZONE_FILL = "zone-fill-source"
@@ -25,10 +24,23 @@ class ZoneController {
   private let PROP_ZONE_NAME = "prop-zone-name"
   private let PROP_ZONE_VISIBLE = "prop-zone-visible"
 
+  private let PROP_ZONE_TEXT_COLOR = "prop-zone-text-color"
+  private let PROP_ZONE_TEXT_COLOR_SELECTED = "prop-zone-text-color-selected"
+  private let PROP_ZONE_TEXT_SIZE = "prop-zone-text-size"
+  private let PROP_ZONE_TEXT_OPACITY = "prop-zone-text-opacity"
+  private let PROP_ZONE_TEXT_ALLOW_OVERLAP = "prop-zone-text-allow-overlap"
+  private let PROP_ZONE_TEXT_IGNORE_PLACEMENT = "prop-zone-text-ignore-placement"
+  private let PROP_ZONE_TEXT_ANCHOR = "prop-zone-text-anchor"
+
   private let PROP_ZONE_FILL_COLOR = "prop-zone-fill-color"
   private let PROP_ZONE_FILL_COLOR_SELECTED = "prop-zone-fill-color-selected"
+  private let PROP_ZONE_FILL_ALPHA = "prop-zone-fill-alpha"
+
   private let PROP_ZONE_LINE_COLOR = "prop-zone-line-color"
   private let PROP_ZONE_LINE_COLOR_SELECTED = "prop-zone-line-color-selected"
+  private let PROP_ZONE_LINE_OPACITY = "prop-zone-line-opacity"
+  private let PROP_ZONE_LINE_WIDTH = "prop-zone-line-width"
+  private let PROP_ZONE_LINE_WIDTH_SCALED = "prop-zone-line-width-scaled"
 
   private var mapRepository: MapRepository
   private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
@@ -98,10 +110,21 @@ class ZoneController {
   }
 
   func setup(zones: [Zone], sharedProperties: SharedZoneProperties?) {
+    self.zoneTextFeatures.removeAll()
+    self.zoneFillFeatures.removeAll()
+    self.zoneLineFeatures.removeAll()
     self.sharedProperties = sharedProperties
     zones.forEach { (zone) in
       if let point = zone.navigationPoint {
         let coordinate = CLLocationCoordinate2D(latitude: point.y, longitude: point.x)
+        let textStyle = mapOptions.zoneStyle.textStyle
+        let textColor = zone.properties.textColor ?? sharedProperties?.textColor ?? textStyle.textColor.asHex
+        let textColorSelected = zone.properties.textColorSelected ?? sharedProperties?.textColorSelected ?? textStyle.textColorSelected.asHex
+        let textSize = zone.properties.textSize ?? sharedProperties?.textSize ?? textStyle.textMaxSize
+        let textOpacity = zone.properties.textOpacity ?? sharedProperties?.textOpacity ?? textStyle.textOpacity
+        let textAllowOverlap = zone.properties.textAllowOverLap ?? sharedProperties?.textAllowOverLap ?? textStyle.textAllowOverLap
+        let textAnchor = zone.properties.textAnchor ?? sharedProperties?.textAnchor ?? textStyle.textAnchor
+        let textIgnorePlacement = zone.properties.textIgnorePlacement ?? sharedProperties?.textIgnorePlacement ?? textStyle.textIgnorePlacement
         var textFeature = Feature(geometry: .point(Point(coordinate)))
         textFeature.properties = JSONObject()
         textFeature.properties?[PROP_ZONE_ID] = .string(zone.id)
@@ -109,12 +132,20 @@ class ZoneController {
         textFeature.properties?[PROP_ZONE_NAME] = .string(zone.name)
         textFeature.properties?[PROP_SELECTED] = .boolean(false)
         textFeature.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+        textFeature.properties?[PROP_ZONE_TEXT_COLOR] = .string(textColor)
+        textFeature.properties?[PROP_ZONE_TEXT_COLOR_SELECTED] = .string(textColorSelected)
+        textFeature.properties?[PROP_ZONE_TEXT_SIZE] = .number(textSize)
+        textFeature.properties?[PROP_ZONE_TEXT_OPACITY] = .number(textOpacity)
+        textFeature.properties?[PROP_ZONE_TEXT_ALLOW_OVERLAP] = .boolean(textAllowOverlap)
+        textFeature.properties?[PROP_ZONE_TEXT_IGNORE_PLACEMENT] = .boolean(textIgnorePlacement)
+        textFeature.properties?[PROP_ZONE_TEXT_ANCHOR] = .string(textAnchor)
         self.zoneTextFeatures[zone.id] = textFeature
       }
 
       let polygon = zone.polygon.map { CLLocationCoordinate2D(latitude: $0.y, longitude: $0.x) }
       let fillColor = zone.properties.fillColor ?? sharedProperties?.fillColor ?? mapOptions.zoneStyle.fillStyle.color.asHex
       let fillColorSelected = zone.properties.fillColorSelected ?? sharedProperties?.fillColorSelected ?? mapOptions.zoneStyle.fillStyle.colorSelected.asHex
+      let fillAlpha = zone.properties.fillAlpha ?? sharedProperties?.fillAlpha ?? mapOptions.zoneStyle.fillStyle.alpha
 
       var fillFeature = Feature(geometry: .polygon(Polygon([polygon])))
       fillFeature.properties = JSONObject()
@@ -125,11 +156,14 @@ class ZoneController {
       fillFeature.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
       fillFeature.properties?[PROP_ZONE_FILL_COLOR] = .string(fillColor)
       fillFeature.properties?[PROP_ZONE_FILL_COLOR_SELECTED] = .string(fillColorSelected)
+      fillFeature.properties?[PROP_ZONE_FILL_ALPHA] = .number(fillAlpha)
 
       self.zoneFillFeatures[zone.id] = fillFeature
 
       let lineColor = zone.properties.lineColor ?? sharedProperties?.lineColor ?? mapOptions.zoneStyle.lineStyle.lineColor.asHex
       let lineColorSelected = zone.properties.lineColorSelected ?? sharedProperties?.lineColorSelected ?? mapOptions.zoneStyle.lineStyle.lineColorSelected.asHex
+      let lineOpacity = zone.properties.lineOpacity ?? sharedProperties?.lineOpacity ?? mapOptions.zoneStyle.lineStyle.lineOpacity
+      let lineWidth = zone.properties.lineWidth ?? sharedProperties?.lineWidth ?? mapOptions.zoneStyle.lineStyle.lineWidth
 
       var lineFeature = Feature(geometry: .polygon(Polygon([polygon])))
       lineFeature.properties = JSONObject()
@@ -140,6 +174,9 @@ class ZoneController {
       lineFeature.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
       lineFeature.properties?[PROP_ZONE_LINE_COLOR] = .string(lineColor)
       lineFeature.properties?[PROP_ZONE_LINE_COLOR_SELECTED] = .string(lineColorSelected)
+      lineFeature.properties?[PROP_ZONE_LINE_OPACITY] = .number(lineOpacity)
+      lineFeature.properties?[PROP_ZONE_LINE_WIDTH] = .number(lineWidth)
+      lineFeature.properties?[PROP_ZONE_LINE_WIDTH_SCALED] = .number(lineWidth * 5)
       self.zoneLineFeatures[zone.id] = lineFeature
     }
   }
@@ -153,12 +190,8 @@ class ZoneController {
     _zoneLineSource?.data = .empty
 
     let textSizeStops: [Double: Double] = [
-      // If the map is at zoom level 12 or below,
-      // set circle radius to 2
       0: mapOptions.zoneStyle.textStyle.textMinSize,
       7: (mapOptions.zoneStyle.textStyle.textMinSize + mapOptions.zoneStyle.textStyle.textMaxSize) / 2,
-      // If the map is at zoom level 22 or above,
-      // set circle radius to 180
       12: mapOptions.zoneStyle.textStyle.textMaxSize
     ]
 
@@ -180,16 +213,17 @@ class ZoneController {
     _zoneTextLayer?.textColor = .expression(
       Exp(.switchCase) {
         Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }
-        mapOptions.zoneStyle.textStyle.textColorSelected
-        mapOptions.zoneStyle.textStyle.textColor
+        Exp(.get) { PROP_ZONE_TEXT_COLOR_SELECTED }
+        Exp(.get) { PROP_ZONE_TEXT_COLOR }
       }
     )
-    _zoneTextLayer?.textOpacity = .constant(mapOptions.zoneStyle.textStyle.textOpacity)
-    _zoneTextLayer?.textIgnorePlacement = .constant(mapOptions.zoneStyle.textStyle.textIgnorePlacement)
-    _zoneTextLayer?.textAnchor = .constant(TextAnchor(rawValue: mapOptions.zoneStyle.textStyle.textAnchor) ?? .bottom)
+    _zoneTextLayer?.textOpacity = .expression(Exp(.get) { PROP_ZONE_TEXT_OPACITY })
+    _zoneTextLayer?.textIgnorePlacement = .expression(Exp(.get) { PROP_ZONE_TEXT_IGNORE_PLACEMENT })
+    _zoneTextLayer?.textAnchor = .expression(Exp(.get) { PROP_ZONE_TEXT_ANCHOR })
     _zoneTextLayer?.textOffset = .constant(mapOptions.zoneStyle.textStyle.textOffset)
-    _zoneTextLayer?.textAllowOverlap = .constant(mapOptions.zoneStyle.textStyle.textAllowOverLap)
+    _zoneTextLayer?.textAllowOverlap = .expression(Exp(.get) { PROP_ZONE_TEXT_ALLOW_OVERLAP })
     _zoneTextLayer?.textFont = .constant([mapOptions.zoneStyle.textStyle.textFont])
+    _zoneTextLayer?.textSize = .expression(Exp(.get) { PROP_ZONE_TEXT_SIZE })
     _zoneTextLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }
 
     _zoneFillLayer = FillLayer(id: LAYER_ZONE_FILL)
@@ -201,14 +235,9 @@ class ZoneController {
         Exp(.get) { PROP_ZONE_FILL_COLOR }
       }
     )
-    _zoneFillLayer?.fillOpacity = .constant(mapOptions.zoneStyle.fillStyle.alpha)
+    _zoneFillLayer?.fillOpacity = .expression(Exp(.get) { PROP_ZONE_FILL_ALPHA })
     _zoneFillLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }
 
-    let lineWidthStops: [Double : Double] = [
-      0.0: mapOptions.zoneStyle.lineStyle.lineWidth,
-      7.5: mapOptions.zoneStyle.lineStyle.lineWidth,
-      10.0: mapOptions.zoneStyle.lineStyle.lineWidth * 5
-    ]
     _zoneLineLayer = LineLayer(id: LAYER_ZONE_LINE)
     _zoneLineLayer?.source = SOURCE_ZONE_LINE
     _zoneLineLayer?.lineColor = .expression(
@@ -220,11 +249,16 @@ class ZoneController {
     )
     _zoneLineLayer?.lineCap = .constant(.round)
     _zoneLineLayer?.lineJoin = .constant(.round)
+    _zoneLineLayer?.lineOpacity = .expression(Exp(.get) { PROP_ZONE_LINE_OPACITY })
     _zoneLineLayer?.lineWidth = .expression(
       Exp(.interpolate) {
         Exp(.exponential) { 1.75 }
         Exp(.zoom)
-        lineWidthStops
+        [
+        0.0: Exp(.get) { PROP_ZONE_LINE_WIDTH },
+        7.5: Exp(.get) { PROP_ZONE_LINE_WIDTH },
+        10.0: Exp(.get) { PROP_ZONE_LINE_WIDTH_SCALED }
+        ]
       }
     )
     _zoneLineLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }
@@ -252,7 +286,7 @@ class ZoneController {
     initSources()
 
     try? mapRepository.style.addSource(zoneTextSource, id: SOURCE_ZONE_TEXT)
-    try? mapRepository.style.addLayer(zoneTextLayer, layerPosition: LayerPosition.default)
+    try? mapRepository.style.addLayer(zoneTextLayer, layerPosition: LayerPosition.below("marker-layer"))
 
     try? mapRepository.style.addSource(zoneLineSource, id: SOURCE_ZONE_LINE)
     try? mapRepository.style.addLayer(zoneLineLayer, layerPosition: LayerPosition.below(DEFAULT_STYLE_WALLS_LAYER))

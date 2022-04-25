@@ -83,7 +83,7 @@ public class BaseMapController: IMapController {
         self.mapRepository.mapData = mapData
 
         guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
-
+        self.styleLoaded = false
         mapViewContainer.mapStyle = self.mapRepository.mapOptions.mapStyle
         mapViewContainer.addLoadingView()
         mapRepository.map = mapView.mapboxMap
@@ -132,6 +132,7 @@ public class BaseMapController: IMapController {
 
         styleLoaded = true
         locationController.setOptions(options: mapView.location.options)
+        locationController.updateUserLocation(newLocation: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0), std: 0.0)
         mapDataLoadedPublisher.send(true)
     }
 
@@ -168,7 +169,7 @@ public class BaseMapController: IMapController {
     }
 
     public func updateUserLocation(newLocation: CGPoint?, std: Float?) {
-        guard let position = newLocation, let std = std else { return }
+        guard let position = newLocation, let std = std, styleLoaded else { return }
 
         let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
 
@@ -187,7 +188,7 @@ public class BaseMapController: IMapController {
 
   public func addGoal(id: String, itemPosition: ItemPosition) {
 
-}
+  }
 
     public func stop() {
         mapViewContainer.addLoadingView()
@@ -202,6 +203,4 @@ public class BaseMapController: IMapController {
     }
 
     public func reset() { }
-
 }
-

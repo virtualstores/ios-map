@@ -60,6 +60,22 @@ class CameraController: ICameraController {
             self.actualCameraMode = ContainMapMode(with: self)
         case .threeDimensional(let zoomLevel):
             let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8)
+            let rtls = mapRepository.mapData.rtlsOptions
+            let converter = mapRepository.mapData.converter
+
+            let width = converter.convertFromMetersToMapCoordinate(input: rtls.widthInMeters)
+            let height = converter.convertFromMetersToMapCoordinate(input: rtls.heightInMeters)
+
+            let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height)))
+            let cameraPadding = converter.convertFromMetersToMapCoordinate(input: 10)
+            let cameraBounds: CoordinateBounds
+            let sw = mapBounds.southwest
+            let ne = mapBounds.northeast
+            cameraBounds = CoordinateBounds(
+                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
+                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
+            )
+            try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
             
             self.actualCameraMode = mode
         }
@@ -73,11 +89,21 @@ class CameraController: ICameraController {
         let height = converter.convertFromMetersToMapCoordinate(input: rtls.heightInMeters)
 
         let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height)))
+//      print("Area", rtls.widthInMeters, rtls.heightInMeters, rtls.widthInMeters * rtls.heightInMeters, rtls.widthInMeters * rtls.heightInMeters / .pi)
+      //Area 93.17 112.4 10472.308 3333.439167561601 IKEA delft markethall
         let cameraPadding = converter.convertFromMetersToMapCoordinate(input: 10)
         let cameraBounds: CoordinateBounds
 
         if rtls.widthInMeters > rtls.heightInMeters {
             let modifiedMapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 1.5)), size: CGSize(width: width, height: height * 4.0)))
+            let sw = modifiedMapBounds.southwest
+            let ne = modifiedMapBounds.northeast
+            cameraBounds = CoordinateBounds(
+                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
+                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
+            )
+        } else if rtls.widthInMeters > (rtls.heightInMeters * 0.8) {
+            let modifiedMapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 1.2)), size: CGSize(width: width, height: height * 3.0)))
             let sw = modifiedMapBounds.southwest
             let ne = modifiedMapBounds.northeast
             cameraBounds = CoordinateBounds(

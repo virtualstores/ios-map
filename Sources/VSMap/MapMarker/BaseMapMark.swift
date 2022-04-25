@@ -29,9 +29,9 @@ public class BaseMapMark: MapMark {
   public init(
     id: String,
     position: CGPoint,
-    floorLevelId: Int64?,
-    triggerRadius: Double?,
-    data: UIImage?,
+    floorLevelId: Int64? = nil,
+    triggerRadius: Double? = nil,
+    data: Any? = nil,
     clusterable: Bool,
     deletable: Bool,
     defaultVisibility: Bool,
@@ -66,20 +66,14 @@ public class BaseMapMark: MapMark {
   }
 
   private func createMarker(completion: @escaping (UIImage) -> Void) {
-    let view = MarkerView.loadNib(for: MarkerView.self, bundle: Bundle.module)
-    let id = Bundle.module.path(forResource: "MarkerView", ofType: "nib")
-    let bundle = Bundle(identifier: id ?? "")
+    guard let view = MarkerView.loadNib(for: MarkerView.self, bundle: .module) else { return }
 
-    guard let view = view else {
-      return
-    }
-
-    if let imageUrl = imageUrl {
+    if let imageUrl = imageUrl/*, !imageUrl.isEmpty*/ {
       view.imageView.load(url: imageUrl) { _ in
         completion(view.asImage())
       }
     } else {
-      view.label.text = text
+      view.label.text = text ?? id
       completion(view.asImage())
     }
   }
@@ -99,9 +93,9 @@ extension UIImageView {
       } catch {
         print(#function, error.localizedDescription)
         DispatchQueue.main.async {
-          self?.image = UIImage(named: "no_image_available")
+          self?.image = UIImage(named: "no_image_available", in: .module, with: nil)
+          completion(error)
         }
-        completion(error)
       }
     }
   }
@@ -111,6 +105,9 @@ extension UIImageView {
       self.load(url: url) { (error) in
         completion(error)
       }
+    } else {
+      self.image = UIImage(named: "no_image_available", in: .module, with: nil)
+      completion(nil)
     }
   }
 }

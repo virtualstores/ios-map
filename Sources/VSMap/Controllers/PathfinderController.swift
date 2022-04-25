@@ -106,6 +106,7 @@ class PathfinderController {
   var converter: ICoordinateConverter { mapRepository.mapData.converter }
   var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
+  var floorLevelId: Int64 { mapRepository.floorLevelId }
 
   init(mapRepository: MapRepository) {
     self.mapRepository = mapRepository
@@ -212,12 +213,13 @@ class PathfinderController {
   }
 
   private func refreshLines() {
-      guard !allGoals.isEmpty else {
-          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
-          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
-          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
-          try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.lineString(LineString([]))))
-          return
+    DispatchQueue.main.async {
+      guard !self.allGoals.isEmpty else {
+        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
+        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
+        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
+        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.lineString(LineString([]))))
+        return
       }
 
       self.latestRefresh = Date()
@@ -227,6 +229,7 @@ class PathfinderController {
 
       guard let coordinate = self.currentHeadPath.last else { return }
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.point(Point(coordinate))))
+    }
   }
 
   func bindPublishers() {
@@ -236,7 +239,7 @@ class PathfinderController {
         self?._currentGoal = goal.asPathfindeingGoal
         self?._onCurrentGoalChangePublisher.send(goal.asPathfindeingGoal)
       }).store(in: &cancellable)
-      
+
     pathfinder?.sortedGoalUpdatedPublisher
       .compactMap { $0 }
       .sink(receiveValue: { [weak self] (goals) in
@@ -244,21 +247,21 @@ class PathfinderController {
         self?._sortedGoals = pathfindingGoals
         self?._onSortedGoalChangePublisher.send(pathfindingGoals)
       }).store(in: &cancellable)
-      
+
     pathfinder?.pathUpdatedPublisher
       .compactMap { $0 }
       .sink(receiveValue: { [weak self] (path) in
-        guard let converter = self?.mapRepository.mapData.converter else { return }
+        guard let converter = self?.converter else { return }
         let modified = path.convertFromPixelToMapCoordinate(converter: converter)
         self?.currentHeadPath = modified.head
         self?.currentBodyPath = modified.body
         self?.currentTailPath = modified.tail
       }).store(in: &cancellable)
 
-    pathfinder?.hasGoal
-      .sink(receiveValue: { [weak self] (hasGoal) in
-
-      }).store(in: &cancellable)
+//    pathfinder?.hasGoal
+//      .sink(receiveValue: { [weak self] (hasGoal) in
+//
+//      }).store(in: &cancellable)
   }
 
   func onStyleUpdated() {
@@ -276,7 +279,7 @@ class PathfinderController {
     try? mapRepository.style.addSource(lineSourceEnd, id: SOURCE_ID_END)
     try? mapRepository.style.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
   }
-    
+
   deinit {
     cancellable.removeAll()
   }
@@ -322,14 +325,29 @@ extension PathfinderController: IPathfindingController {
 //      }
 //    })
 
-    pathfinder?.set(goals: filterGoals().map { $0.asGoal.convertFromMeterToPixel(converter: converter) }) {
+    let goals = filterGoals(forFloorLevel: false)
+    var filteredGoals = filterGoals()
+    goals.forEach { goal in
+      guard let floorLevelId = goal.floorLevelId else { return }
+      if floorLevelId != mapRepository.floorLevelId {
+        guard let swapLocation = mapRepository.swapLocations[self.floorLevelId]?.first else { return }
+        filteredGoals.append(swapLocation.point.asPathfindingGoal(floorLevelId: self.floorLevelId))
+      }
+    }
+
+    pathfinder?.set(goals: filteredGoals.map { $0.asGoal.convertFromMeterToPixel(converter: converter) }) {
       self.refreshLines()
       completion()
     }
   }
 
-  private func filterGoals() -> [PathfindingGoal] {
-    allGoals.values.filter { $0.floorLevelId == mapRepository.floorLevelId }.map { $0 }
+  private func filterGoals(forFloorLevel: Bool = true) -> [PathfindingGoal] {
+    let goals: [PathfindingGoal] = allGoals.values.map { $0 }
+    if forFloorLevel {
+      return goals.filter { $0.floorLevelId == floorLevelId }
+    } else {
+      return goals
+    }
   }
 
   func remove(goal: PathfindingGoal, completion: @escaping (() -> Void)) {
@@ -396,3 +414,8 @@ extension PathfinderController: IPathfindingController {
   }
 }
 
+extension SwapLocation.Point {
+  func asPathfindingGoal(floorLevelId: Int64) -> PathfindingGoal {
+    PathfindingGoal(id: "SwapLocation-\(name ?? "")", position: coordinate, data: nil, type: .target, floorLevelId: floorLevelId)
+  }
+}
