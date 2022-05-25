@@ -179,8 +179,8 @@ class MarkerControllerImpl: IMarkerController {
             feature.properties?[self.PROP_ID] = .string(holder.id)
             feature.properties?[self.PROP_FOCUSED] = .boolean(marker.focused)
             feature.properties?[self.PROP_CLUSTERABLE] = .boolean(marker.clusterable)
-            feature.properties?[self.PROP_OFFSET_X] = .number(marker.offsetX)
-            feature.properties?[self.PROP_OFFSET_Y] = .number(marker.offsetY)
+            feature.properties?[self.PROP_OFFSET_X] = .number(marker.offset.dx)
+            feature.properties?[self.PROP_OFFSET_Y] = .number(marker.offset.dy)
 
             feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == marker.floorLevelId)
 
@@ -305,7 +305,6 @@ class MarkerControllerImpl: IMarkerController {
         startLocationFeatures.forEach { startLocationFeatures[$0.key]?.properties?[PROP_VISIBLE] = .boolean(isVisible) }
         refreshMarkers()
     }
-    
 }
 
 extension MarkerControllerImpl {

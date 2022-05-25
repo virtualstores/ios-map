@@ -45,7 +45,7 @@ class ZoneController {
   private var mapRepository: MapRepository
   private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   private var sharedProperties: SharedZoneProperties?
-  private var zones: [Zone] = []
+  public private(set) var zones: [Zone] = []
 
   private var zoneTextFeatures: [String : Feature] = [:]
 //  private var zoneTextMarks = mutableMapOf<String, TT2Feature>()
@@ -336,50 +336,47 @@ extension ZoneController: IZoneController {
   }
 
   func showAll() {
-
+    zones.forEach { showZone($0) }
+    refreshZones()
   }
 
   func hideAll() {
-
+    zones.forEach { hideZone($0) }
+    refreshZones()
   }
 
   func show(zone: Zone) {
-    zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
-    zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
-    zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+    showZone(zone)
     refreshZones()
   }
 
   func hide(zone: Zone) {
-    zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
-    zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
-    zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+    hideZone(zone)
     refreshZones()
   }
 
   func select(zone: Zone) {
-    zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
-    zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
-    zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
+    selectZone(zone)
     refreshZones()
   }
 
   func select(zones: [Zone]) {
+    zones.forEach { selectZone($0) }
     refreshZones()
   }
 
   func deselect(zone: Zone) {
-    zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
-    zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
-    zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
+    deselectZone(zone)
     refreshZones()
   }
 
   func deselect(zones: [Zone]) {
+    zones.forEach { deselectZone($0) }
     refreshZones()
   }
 
   func deselectAll() {
+    zones.forEach { deselectZone($0) }
     refreshZones()
   }
 
@@ -392,7 +389,31 @@ extension ZoneController: IZoneController {
 }
 
 private extension ZoneController {
-  private func showZone(zoneId: String) {
+  func showZone(_ zone: Zone) {
+    zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+    zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+    zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
+  }
+
+  func hideZone(_ zone: Zone) {
+    zoneTextFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+    zoneFillFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+    zoneLineFeatures[zone.id]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+  }
+
+  func selectZone(_ zone: Zone) {
+    zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
+    zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
+    zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(true)
+  }
+
+  func deselectZone(_ zone: Zone) {
+    zoneTextFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
+    zoneFillFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
+    zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
+  }
+
+  func showZone(zoneId: String) {
     guard
       var fillFeature = zoneFillFeatures[zoneId],
       var textFeature = zoneTextFeatures[zoneId]
@@ -402,7 +423,7 @@ private extension ZoneController {
     textFeature.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
   }
 
-  private func hideZone(zoneId: String) {
+  func hideZone(zoneId: String) {
     guard
       var fillFeature = zoneFillFeatures[zoneId],
       var textFeature = zoneTextFeatures[zoneId]

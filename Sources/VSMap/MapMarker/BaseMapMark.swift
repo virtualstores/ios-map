@@ -13,6 +13,7 @@ import UIKit
 public class BaseMapMark: MapMark {
   public var id: String
   public var position: CGPoint
+  public var offset: CGVector
   public var floorLevelId: Int64?
   public var triggerRadius: Double?
   public var data: Any?
@@ -20,8 +21,6 @@ public class BaseMapMark: MapMark {
   public var deletable: Bool
   public var defaultVisibility: Bool
   public var focused: Bool
-  public var offsetX: Double
-  public var offsetY: Double
 
   public var text: String?
   public var imageUrl: String?
@@ -29,6 +28,7 @@ public class BaseMapMark: MapMark {
   public init(
     id: String,
     position: CGPoint,
+    offset: CGVector,
     floorLevelId: Int64? = nil,
     triggerRadius: Double? = nil,
     data: Any? = nil,
@@ -36,13 +36,12 @@ public class BaseMapMark: MapMark {
     deletable: Bool,
     defaultVisibility: Bool,
     focused: Bool,
-    offsetX: Double,
-    offsetY: Double,
     text: String?,
     imageUrl: String?
   ) {
     self.id = id
     self.position = position
+    self.offset = offset
     self.floorLevelId = floorLevelId
     self.triggerRadius = triggerRadius
     self.data = data
@@ -50,8 +49,6 @@ public class BaseMapMark: MapMark {
     self.deletable = deletable
     self.defaultVisibility = defaultVisibility
     self.focused = focused
-    self.offsetY = offsetY
-    self.offsetX = offsetX
     self.text = text
     self.imageUrl = imageUrl
   }
