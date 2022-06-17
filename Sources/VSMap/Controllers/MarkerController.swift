@@ -1,5 +1,5 @@
 //
-// MarkerControllerImpl.swift
+// MarkerController.swift
 // VSFoundation
 //
 // Created by Hripsime on 2022-02-18.
@@ -11,7 +11,7 @@ import CoreGraphics
 import MapboxMaps
 import Combine
 
-class MarkerControllerImpl: IMarkerController {
+class MarkerController: IMarkerController {
     private let TAG = "MarkerController"
     
     private let SOURCE_ID = "marker-source"
@@ -117,7 +117,6 @@ class MarkerControllerImpl: IMarkerController {
 //        ]
 
         _markerSource?.data = .empty
-        
         
         _markerLayer = SymbolLayer(id: MARKER_LAYER_ID)
         _markerLayer?.source = SOURCE_ID
@@ -307,7 +306,7 @@ class MarkerControllerImpl: IMarkerController {
     }
 }
 
-extension MarkerControllerImpl {
+extension MarkerController {
     func onStyleUpdated() {
         initSources()
 

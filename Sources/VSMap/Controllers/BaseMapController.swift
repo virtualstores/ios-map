@@ -36,6 +36,8 @@ public class BaseMapController: IMapController {
     public var path: IPathfindingController { pathfinderController }
 
     public var zone: IZoneController { zoneController }
+
+    public var shelf: IShelfController { shelfController }
     
     private var locationController: LocationController {
         guard let internalLocation = internalLocation else { fatalError("location not loaded") }
@@ -49,9 +51,10 @@ public class BaseMapController: IMapController {
     //Controllers for helping baseController to setup map
     var internalLocation: LocationController?
     var cameraController: CameraController?
-    var markerController: MarkerControllerImpl
+    var markerController: MarkerController
     var pathfinderController: PathfinderController
     var zoneController: ZoneController
+    var shelfController: ShelfController
     
     private var mapRepository = MapRepository()
     private var mapViewContainer: TT2MapView
@@ -63,19 +66,22 @@ public class BaseMapController: IMapController {
         self.mapViewContainer.setup(with: token)
         
         mapRepository.mapOptions = mapOptions
+        markerController = MarkerController(mapRepository: mapRepository)
         pathfinderController = PathfinderController(mapRepository: mapRepository)
         zoneController = ZoneController(mapRepository: mapRepository)
-        markerController = MarkerControllerImpl(mapRepository: mapRepository)
+        shelfController = ShelfController(mapRepository: mapRepository)
     }
 
-    public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, changedFloor: Bool = false) {
+    public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
         if changedFloor {
             markerController.onFloorChange(mapRepository: mapRepository)
             pathfinderController.onFloorChange(mapRepository: mapRepository)
             zoneController.onFloorChange(mapRepository: mapRepository)
+            shelfController.onFloorChange(mapRepository: mapRepository)
         }
         pathfinderController.pathfinder = pathfinder
         zoneController.setup(zones: zones, sharedProperties: sharedProperties)
+        shelfController.setShelves(shelves: shelves)
     }
 
     /// Map loader which will receave all needed  setup information
@@ -115,6 +121,7 @@ public class BaseMapController: IMapController {
         markerController.onStyleUpdated()
         pathfinderController.onStyleUpdated()
         zoneController.onStyleUpdated()
+        shelfController.onStyleUpdated()
 
         mapView.location.overrideLocationProvider(with: locationController)
         mapView.location.locationProvider.startUpdatingLocation()

@@ -266,15 +266,15 @@ class ZoneController {
 
   func refreshZones() {
     let filteredTexts = zoneTextFeatures.filter { ($0.value.properties?.first(where: { $0.key == self.PROP_ZONE_VISIBLE })?.value?.rawValue as? Bool ?? false) == true }
-    let texts = filteredTexts.map({ $0.value })
+    let texts = filteredTexts.map { $0.value }
     let textsCollection = FeatureCollection(features: texts)
 
     let filteredFillZones = zoneFillFeatures.filter { ($0.value.properties?.first(where: { $0.key == self.PROP_ZONE_VISIBLE })?.value?.rawValue as? Bool ?? false) == true }
-    let fillZones = filteredFillZones.map({ $0.value })
+    let fillZones = filteredFillZones.map { $0.value }
     let fillCollection = FeatureCollection(features: fillZones)
 
     let filteredLineZones = zoneLineFeatures.filter { ($0.value.properties?.first(where: { $0.key == self.PROP_ZONE_VISIBLE })?.value?.rawValue as? Bool ?? false) == true }
-    let lineZones = filteredLineZones.map({ $0.value })
+    let lineZones = filteredLineZones.map { $0.value }
     let lineCollection = FeatureCollection(features: lineZones)
 
     try? self.style.updateGeoJSONSource(withId: self.SOURCE_ZONE_TEXT, geoJSON: .featureCollection(textsCollection))
@@ -285,42 +285,43 @@ class ZoneController {
   func onStyleUpdated() {
     initSources()
 
-    try? mapRepository.style.addSource(zoneTextSource, id: SOURCE_ZONE_TEXT)
-    try? mapRepository.style.addLayer(zoneTextLayer, layerPosition: LayerPosition.below("marker-layer"))
+    try? style.addSource(zoneTextSource, id: SOURCE_ZONE_TEXT)
+    try? style.addLayer(zoneTextLayer, layerPosition: .below("marker-layer"))
 
-    try? mapRepository.style.addSource(zoneLineSource, id: SOURCE_ZONE_LINE)
-    try? mapRepository.style.addLayer(zoneLineLayer, layerPosition: LayerPosition.below(DEFAULT_STYLE_WALLS_LAYER))
+    try? style.addSource(zoneLineSource, id: SOURCE_ZONE_LINE)
+    try? style.addLayer(zoneLineLayer, layerPosition: .below(DEFAULT_STYLE_WALLS_LAYER))
 
-    try? mapRepository.style.addSource(zoneFillSource, id: SOURCE_ZONE_FILL)
-    try? mapRepository.style.addLayer(zoneFillLayer, layerPosition: LayerPosition.below(LAYER_ZONE_LINE))
+    try? style.addSource(zoneFillSource, id: SOURCE_ZONE_FILL)
+    try? style.addLayer(zoneFillLayer, layerPosition: .below(LAYER_ZONE_LINE))
 
+    hideAll()
     refreshZones()
   }
 }
 
 extension ZoneController: IZoneController {
   func showTextLayer() {
-    _zoneTextLayer?.visibility = .constant(.visible)
+    try? mapRepository.style.updateLayer(withId: LAYER_ZONE_TEXT, type: SymbolLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hideTextLayer() {
-    _zoneTextLayer?.visibility = .constant(.none)
+    try? mapRepository.style.updateLayer(withId: LAYER_ZONE_TEXT, type: SymbolLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func showFillLayer() {
-    _zoneFillLayer?.visibility = .constant(.visible)
+    try? mapRepository.style.updateLayer(withId: LAYER_ZONE_FILL, type: FillLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hideFillLayer() {
-    _zoneFillLayer?.visibility = .constant(.none)
+    try? mapRepository.style.updateLayer(withId: LAYER_ZONE_FILL, type: FillLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func showLineLayer() {
-    _zoneLineLayer?.visibility = .constant(.visible)
+    try? mapRepository.style.updateLayer(withId: LAYER_ZONE_LINE, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hideLineLayer() {
-    _zoneLineLayer?.visibility = .constant(.none)
+    try? mapRepository.style.updateLayer(withId: LAYER_ZONE_LINE, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func showAllLayers() {

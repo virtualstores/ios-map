@@ -372,15 +372,15 @@ extension PathfinderController: IPathfindingController {
   }
 
   func showHead() {
-    _lineLayerHead?.visibility = .constant(.visible)
+    try? mapRepository.style.updateLayer(withId: LAYER_ID_HEAD, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showBody() {
-    _lineLayerBody?.visibility = .constant(.visible)
+    try? mapRepository.style.updateLayer(withId: LAYER_ID_BODY, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showTail() {
-    _lineLayerTail?.visibility = .constant(.visible)
+    try? mapRepository.style.updateLayer(withId: LAYER_ID_TAIL, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hidePathfinding() {
@@ -390,15 +390,15 @@ extension PathfinderController: IPathfindingController {
   }
 
   func hideHead() {
-    _lineLayerHead?.visibility = .constant(.none)
+    try? mapRepository.style.updateLayer(withId: LAYER_ID_HEAD, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideBody() {
-    _lineLayerBody?.visibility = .constant(.none)
+    try? mapRepository.style.updateLayer(withId: LAYER_ID_BODY, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideTail() {
-    _lineLayerTail?.visibility = .constant(.none)
+    try? mapRepository.style.updateLayer(withId: LAYER_ID_TAIL, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hasGoal() -> Bool {
