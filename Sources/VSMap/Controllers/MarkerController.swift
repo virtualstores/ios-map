@@ -211,10 +211,10 @@ class MarkerController: IMarkerController {
         create(marker: marker) { result in
             switch result {
             case .success(let feature):
-
                 self.markers[marker.id] = marker
                 self.markerFeatures[marker.id] = feature
                 self.refreshMarkers()
+            case .failure(let error): Logger(verbosity: .error).log(message: "Error: Could not add marker: \(error)")
             default: break
             }
         }

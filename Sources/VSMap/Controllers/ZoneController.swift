@@ -198,12 +198,13 @@ class ZoneController {
     _zoneTextLayer = SymbolLayer(id: LAYER_ZONE_TEXT)
     _zoneTextLayer?.source = SOURCE_ZONE_TEXT
     _zoneTextLayer?.textField = .expression(Exp(.get) { PROP_ZONE_NAME })
+    _zoneTextLayer?.textMaxWidth = .constant(5)
     _zoneTextLayer?.textSize = .expression(
       // Produce a continuous, smooth series of values
       // between pairs of input and output values
       Exp(.interpolate) {
         // Set the interpolation type
-        Exp(.exponential) { 1.75 }
+        Exp(.exponential) { 1.0 }
         // Get current zoom level
         Exp(.zoom)
         // Use the stops defined above
@@ -218,10 +219,10 @@ class ZoneController {
       }
     )
     _zoneTextLayer?.textOpacity = .expression(Exp(.get) { PROP_ZONE_TEXT_OPACITY })
-    _zoneTextLayer?.textIgnorePlacement = .expression(Exp(.get) { PROP_ZONE_TEXT_IGNORE_PLACEMENT })
+//    _zoneTextLayer?.textIgnorePlacement = .expression(Exp(.get) { PROP_ZONE_TEXT_IGNORE_PLACEMENT })
     _zoneTextLayer?.textAnchor = .expression(Exp(.get) { PROP_ZONE_TEXT_ANCHOR })
     _zoneTextLayer?.textOffset = .constant(mapOptions.zoneStyle.textStyle.textOffset)
-    _zoneTextLayer?.textAllowOverlap = .expression(Exp(.get) { PROP_ZONE_TEXT_ALLOW_OVERLAP })
+//    _zoneTextLayer?.textAllowOverlap = .expression(Exp(.get) { PROP_ZONE_TEXT_ALLOW_OVERLAP })
     _zoneTextLayer?.textFont = .constant([mapOptions.zoneStyle.textStyle.textFont])
     _zoneTextLayer?.textSize = .expression(Exp(.get) { PROP_ZONE_TEXT_SIZE })
     _zoneTextLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }

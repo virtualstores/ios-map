@@ -13,7 +13,7 @@ import MapboxMaps
 import Combine
 
 public class BaseMapController: IMapController {
-    public var mapDataLoadedPublisher: CurrentValueSubject<Bool?, MapControllerError> = .init(false)
+    public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
 
     public var location: ILocation {
         guard let location = internalLocation else { fatalError("Map not loaded") }

@@ -252,27 +252,27 @@ extension ShelfController {
   }
 
   func showShelvesLineLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.visible); print("updating shelf", $0.id) }
+    try? mapRepository.style.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showShelvesMarkLayer() {
-    try? mapRepository.style.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.visible); print("updating shelf", $0.id) }
+    try? mapRepository.style.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showShelvesFillLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.visible); print("updating shelf", $0.id) }
+    try? mapRepository.style.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hideShelvesLineLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.none); print("updating shelf", $0.id) }
+    try? mapRepository.style.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideShelvesMarkLayer() {
-    try? mapRepository.style.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.none); print("updating shelf", $0.id) }
+    try? mapRepository.style.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideShelvesFillLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.none); print("updating shelf", $0.id) }
+    try? mapRepository.style.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func setShelves(shelves: [ShelfGroup]) {
