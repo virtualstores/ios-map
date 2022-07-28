@@ -151,9 +151,14 @@ public class BaseMapController: IMapController {
     private func setupUserMarker() {
         guard styleLoaded else { return }
         let image = UIImage(named: "userMarker", in: .module, compatibleWith: nil)//mapRepository.mapOptions.mapStyle.userMarkerImage
+        let image1 = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil)
+        let image2 = UIImage(named: "userMarker-shadow", in: .module, compatibleWith: nil)
 
-        if let userMarkerImage = image {
+        if let userMarkerImage = image, mapRepository.mapOptions.userMark.userMarkerType == .bullsEye {
             let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(1.5), showsAccuracyRing: true)
+            mapView.location.options.puckType = .puck2D(config)
+        } else if let image = image1, let shadow = image2, mapRepository.mapOptions.userMark.userMarkerType == .heading {
+            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(1.5), showsAccuracyRing: true)
             mapView.location.options.puckType = .puck2D(config)
         } else {
             mapView.location.options.puckType = .puck2D()
@@ -165,6 +170,7 @@ public class BaseMapController: IMapController {
     }
 
     private func setupCamera(with mode: CameraModes) {
+        guard cameraController == nil else { return }
         cameraController = CameraController(mapView: mapView, mapRepository: mapRepository)
 
         if let controller = cameraController {

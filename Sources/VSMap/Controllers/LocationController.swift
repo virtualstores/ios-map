@@ -37,7 +37,8 @@ class LocationController: ILocation, LocationProvider {
     
     // MARK: ILocation implementation
     public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Float?) {
-        guard let std = std else { return }
+        guard var std = std else { return }
+        if mapRepository.mapOptions.userMark.userMarkerType == .heading { std = max(5.0, std) }
 
         let convertedStd = converter.convertFromMetersToMapMeters(input: Double(std * 1.645))
         let accuracy = CLLocationAccuracy(convertedStd)

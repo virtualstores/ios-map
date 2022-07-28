@@ -50,6 +50,7 @@ class CameraController: ICameraController {
     
     public func resetCameraMode() {
         actualCameraMode?.reset()
+        resetCameraToMapMode()
     }
     
     private func createCameraMode(for mode: CameraModes) {
@@ -75,7 +76,7 @@ class CameraController: ICameraController {
                 southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
                 northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
             )
-            try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
+//            try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
             
             self.actualCameraMode = mode
         }
@@ -102,8 +103,8 @@ class CameraController: ICameraController {
                 southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
                 northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
             )
-        } else if rtls.widthInMeters > (rtls.heightInMeters * 0.8) {
-            let modifiedMapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 1.2)), size: CGSize(width: width, height: height * 3.0)))
+        } else if rtls.widthInMeters > (rtls.heightInMeters * 0.6) {
+            let modifiedMapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 0.8)), size: CGSize(width: width, height: height * 2.5)))
             let sw = modifiedMapBounds.southwest
             let ne = modifiedMapBounds.northeast
             cameraBounds = CoordinateBounds(
@@ -141,9 +142,7 @@ class CameraController: ICameraController {
     private func revertCameraModeAfter(interval: Double) {
         self.revertCameraModeTimer?.invalidate()
         self.revertCameraModeTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false, block: { (_) in
-            guard let mode = self.requestedCameraMode else {
-                return
-            }
+            guard let mode = self.requestedCameraMode else { return }
             
             self.createCameraMode(for: mode)
             self.revertCameraModeTimer?.invalidate()

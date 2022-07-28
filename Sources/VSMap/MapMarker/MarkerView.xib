@@ -14,8 +14,12 @@
             <rect key="frame" x="0.0" y="0.0" width="48" height="58"/>
             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
             <subviews>
-                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="icon-map-marker" translatesAutoresizingMaskIntoConstraints="NO" id="GDx-kY-F7k">
+                <imageView clipsSubviews="YES" userInteractionEnabled="NO" alpha="0.20000000000000001" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="icon-map-marker" translatesAutoresizingMaskIntoConstraints="NO" id="KA0-Yf-D4d" userLabel="icon-map-marker-shadow">
                     <rect key="frame" x="0.0" y="0.0" width="48" height="58"/>
+                    <color key="tintColor" white="0.66666666666666663" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                </imageView>
+                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="icon-map-marker" translatesAutoresizingMaskIntoConstraints="NO" id="GDx-kY-F7k">
+                    <rect key="frame" x="1" y="1" width="46" height="57"/>
                     <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                 </imageView>
                 <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="vm6-4C-zzC">
@@ -39,12 +43,16 @@
             <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
             <constraints>
                 <constraint firstItem="4JE-MB-Qb4" firstAttribute="centerX" secondItem="Y4z-V5-FSY" secondAttribute="centerX" id="3Gw-Hi-9Kw"/>
-                <constraint firstAttribute="trailing" secondItem="GDx-kY-F7k" secondAttribute="trailing" id="3YY-Q8-C95"/>
+                <constraint firstAttribute="trailing" secondItem="GDx-kY-F7k" secondAttribute="trailing" constant="1" id="3YY-Q8-C95"/>
                 <constraint firstItem="4JE-MB-Qb4" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" constant="12" id="64A-GI-Ccr"/>
-                <constraint firstItem="GDx-kY-F7k" firstAttribute="leading" secondItem="Y4z-V5-FSY" secondAttribute="leading" id="MHu-qI-5wA"/>
+                <constraint firstItem="KA0-Yf-D4d" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" id="LZC-W8-vbv"/>
+                <constraint firstItem="GDx-kY-F7k" firstAttribute="leading" secondItem="Y4z-V5-FSY" secondAttribute="leading" constant="1" id="MHu-qI-5wA"/>
                 <constraint firstAttribute="bottom" secondItem="GDx-kY-F7k" secondAttribute="bottom" id="MO1-4Y-OuA"/>
+                <constraint firstAttribute="trailing" secondItem="KA0-Yf-D4d" secondAttribute="trailing" id="Uxs-xm-jcT"/>
                 <constraint firstItem="vm6-4C-zzC" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" constant="8" id="Xm1-Gk-JGC"/>
-                <constraint firstItem="GDx-kY-F7k" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" id="cZe-Ok-vAc"/>
+                <constraint firstItem="KA0-Yf-D4d" firstAttribute="leading" secondItem="Y4z-V5-FSY" secondAttribute="leading" id="YoN-MP-AiR"/>
+                <constraint firstItem="GDx-kY-F7k" firstAttribute="top" secondItem="Y4z-V5-FSY" secondAttribute="top" constant="1" id="cZe-Ok-vAc"/>
+                <constraint firstAttribute="bottom" secondItem="KA0-Yf-D4d" secondAttribute="bottom" id="oDx-6u-0mW"/>
                 <constraint firstItem="vm6-4C-zzC" firstAttribute="centerX" secondItem="Y4z-V5-FSY" secondAttribute="centerX" id="pra-AU-dt7"/>
             </constraints>
             <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>

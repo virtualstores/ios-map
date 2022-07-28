@@ -48,7 +48,7 @@ class MarkerController: IMarkerController {
     let CLUSTER_TRIGGER_RADIUS: Double = 60000
     let CLUSTER_ICON_SIZE = 64
 
-    var allMarkers: [MapMark] = []
+    var allMarkers: [MapMark] { markers.values.map { $0 } }
     var onMarkerClicked: CurrentValueSubject<MapMark?, Never> = .init(nil)
 
     private var mapRepository: MapRepository
@@ -181,7 +181,7 @@ class MarkerController: IMarkerController {
             feature.properties?[self.PROP_OFFSET_X] = .number(marker.offset.dx)
             feature.properties?[self.PROP_OFFSET_Y] = .number(marker.offset.dy)
 
-            feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == marker.floorLevelId)
+            feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == marker.floorLevelId ?? self.floorLevelId)
 
             completion(.success(feature))
         }
@@ -215,7 +215,6 @@ class MarkerController: IMarkerController {
                 self.markerFeatures[marker.id] = feature
                 self.refreshMarkers()
             case .failure(let error): Logger(verbosity: .error).log(message: "Error: Could not add marker: \(error)")
-            default: break
             }
         }
     }
@@ -272,32 +271,32 @@ class MarkerController: IMarkerController {
     }
     
     func updateLocation(newLocation: CGPoint, precision: Float) {
-      let coordinate = newLocation.convertFromMeterToLatLng(converter: converter)
-      markers.forEach { (key, value) in
-        if self.setTransparentMarkers(coordinate: coordinate, marker: value) {
-          refreshMarkers()
+        let coordinate = newLocation.convertFromMeterToLatLng(converter: converter)
+        markers.forEach { (key, value) in
+            if self.setTransparentMarkers(coordinate: coordinate, marker: value) {
+                refreshMarkers()
+            }
         }
-      }
     }
 
-  func setTransparentMarkers(coordinate: CLLocationCoordinate2D, marker: MapMark) -> Bool {
-    var update = false
-    guard let feature = markerFeatures[marker.id] else { return update }
-    let markerCoordinate = marker.position.convertFromMeterToLatLng(converter: converter)
-    let distance = markerCoordinate.distance(to: coordinate)
-    if distance < TRANSPARENCY_TRIGGER_RADIUS {
-      let adjustedCoordinate = CLLocationCoordinate2D(latitude: coordinate.latitude - 0.3, longitude: coordinate.longitude)
-      let transparency = markerCoordinate.distance(to: adjustedCoordinate)
-      let trans = min(max(transparency / (TRANSPARENCY_TRIGGER_RADIUS * 1.5), 0.4), 1.0)
-      markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(trans)
-      update = true
-    } else {
-      guard let transparency = feature.properties?[PROP_TRANSPARENCY]??.rawValue as? Double, transparency != 1.0, !update else { return update }
-      markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(1.0)
-      update = true
+    func setTransparentMarkers(coordinate: CLLocationCoordinate2D, marker: MapMark) -> Bool {
+        var update = false
+        guard let feature = markerFeatures[marker.id] else { return update }
+        let markerCoordinate = marker.position.convertFromMeterToLatLng(converter: converter)
+        let distance = markerCoordinate.distance(to: coordinate)
+        if distance < TRANSPARENCY_TRIGGER_RADIUS {
+            let adjustedCoordinate = CLLocationCoordinate2D(latitude: coordinate.latitude - 0.3, longitude: coordinate.longitude)
+            let transparency = markerCoordinate.distance(to: adjustedCoordinate)
+            let trans = min(max(transparency / (TRANSPARENCY_TRIGGER_RADIUS * 1.5), 0.4), 1.0)
+            markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(trans)
+            update = true
+        } else {
+            guard let transparency = feature.properties?[PROP_TRANSPARENCY]??.rawValue as? Double, transparency != 1.0, !update else { return update }
+            markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(1.0)
+            update = true
+        }
+        return update
     }
-    return update
-  }
     
     func setStartLocationsVisibility(isVisible: Bool) {
         isStartLocationsVisible = isVisible

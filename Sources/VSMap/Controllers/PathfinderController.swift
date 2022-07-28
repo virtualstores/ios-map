@@ -224,8 +224,12 @@ class PathfinderController {
 
       self.latestRefresh = Date()
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
+      if self.mapOptions.pathfindingStyle.showPathfindingBody {
+        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
+      }
+      if self.mapOptions.pathfindingStyle.showPathfindingTail {
+        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
+      }
 
       guard let coordinate = self.currentHeadPath.last else { return }
       try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.point(Point(coordinate))))
@@ -330,7 +334,7 @@ extension PathfinderController: IPathfindingController {
     goals.forEach { goal in
       guard let floorLevelId = goal.floorLevelId else { return }
       if floorLevelId != mapRepository.floorLevelId {
-        guard let swapLocation = mapRepository.swapLocations[self.floorLevelId]?.first else { return }
+        guard let swapLocation = mapRepository.swapLocations[self.floorLevelId]?.first, filteredGoals.contains(where: { $0.id.contains(swapLocation.name) }) else { return }
         filteredGoals.append(swapLocation.point.asPathfindingGoal(floorLevelId: self.floorLevelId))
       }
     }
