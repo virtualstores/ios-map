@@ -211,6 +211,7 @@ public class BaseMapController: IMapController {
             self.mapView.location.locationProvider.stopUpdatingHeading()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self.mapViewContainer.dismissLoadingScreen()
+                self.marker.updateLocation(newLocation: .zero, precision: 0.0)
             }
         }
     }
