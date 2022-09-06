@@ -12,24 +12,25 @@ import UIKit
 
 public class BaseMapMark: MapMark {
   public var id: String
-  public var position: CGPoint
-  public var offset: CGVector
-  public var floorLevelId: Int64?
+  public var itemPosition: ItemPosition
   public var triggerRadius: Double?
   public var data: Any?
   public var clusterable: Bool
   public var deletable: Bool
   public var defaultVisibility: Bool
   public var focused: Bool
+  public var scale: Double = 1.0
 
   public var text: String?
   public var imageUrl: String?
 
+  public var position: CGPoint { itemPosition.point }
+  public var offset: CGVector { itemPosition.offset }
+  public var floorLevelId: Int64 { itemPosition.floorLevelId }
+
   public init(
     id: String,
-    position: CGPoint,
-    offset: CGVector,
-    floorLevelId: Int64? = nil,
+    itemPosition: ItemPosition,
     triggerRadius: Double? = nil,
     data: Any? = nil,
     clusterable: Bool,
@@ -40,9 +41,7 @@ public class BaseMapMark: MapMark {
     imageUrl: String?
   ) {
     self.id = id
-    self.position = position
-    self.offset = offset
-    self.floorLevelId = floorLevelId
+    self.itemPosition = itemPosition
     self.triggerRadius = triggerRadius
     self.data = data
     self.clusterable = clusterable
@@ -67,11 +66,14 @@ public class BaseMapMark: MapMark {
 
     if let imageUrl = imageUrl/*, !imageUrl.isEmpty*/ {
       view.imageView.load(url: imageUrl) { _ in
-        completion(view.asImage())
+//        completion(view.asImage().resizeImage(scale: self.scale))
+        let image = view.asImage()
+        completion(image.resizeImage(targetSize: image.size * self.scale))
       }
     } else {
       view.label.text = text ?? id
-      completion(view.asImage())
+      let image = view.asImage()
+      completion(image.resizeImage(targetSize: image.size * self.scale))
     }
   }
 }
@@ -106,5 +108,39 @@ extension UIImageView {
       self.image = UIImage(named: "no_image_available", in: .module, with: nil)
       completion(nil)
     }
+  }
+}
+
+extension UIImage {
+  func resizeImage(targetSize: CGSize) -> UIImage {
+    let size = size
+
+    let widthRatio  = targetSize.width  / size.width
+    let heightRatio = targetSize.height / size.height
+
+    // Figure out what our orientation is, and use that to form the rectangle
+    let newSize: CGSize
+    if(widthRatio > heightRatio) {
+      newSize = CGSize(width: size.width * heightRatio, height: size.height * heightRatio)
+    } else {
+      newSize = CGSize(width: size.width * widthRatio,  height: size.height * widthRatio)
+    }
+
+    // This is the rect that we've calculated out and this is what is actually used below
+    let rect = CGRect(origin: .zero, size: newSize)
+
+    // Actually do the resizing to the rect using the ImageContext stuff
+    UIGraphicsBeginImageContextWithOptions(newSize, false, scale)
+    draw(in: rect)
+    let newImage = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+
+    return newImage!
+  }
+}
+
+extension CGSize {
+  static func * (lhs: CGSize, rhs: Double) -> CGSize {
+    CGSize(width: lhs.width * rhs, height: lhs.height * rhs)
   }
 }
