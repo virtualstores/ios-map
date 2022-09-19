@@ -55,9 +55,7 @@ public class MapRepository {
         set { _map = newValue }
     }
     
-    var floorLevelId: Int64 {
-        mapData.rtlsOptions.id
-    }
+    var floorLevelId: Int64 { mapData.rtlsOptions.id }
     
     var swapLocations: [Int64: [SwapLocation]] {
         get {

@@ -200,10 +200,6 @@ public class BaseMapController: IMapController {
         location.updateUserDirection(newDirection: newDirection)
     }
 
-  public func addGoal(id: String, itemPosition: ItemPosition) {
-
-  }
-
     public func stop() {
         mapViewContainer.addLoadingView()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

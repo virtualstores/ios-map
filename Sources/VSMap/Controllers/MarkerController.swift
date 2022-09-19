@@ -188,7 +188,7 @@ class MarkerController: IMarkerController {
     }
 
     func onClick(point: CGPoint) {
-      mapRepository.map.queryRenderedFeatures(at: point) { (result) in
+      mapRepository.map.queryRenderedFeatures(with: point) { (result) in
         switch result {
         case .success(let features):
           features.forEach { feature in

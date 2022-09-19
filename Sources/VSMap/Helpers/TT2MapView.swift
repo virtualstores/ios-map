@@ -24,7 +24,7 @@ public class TT2MapView: UIView {
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.addSubview(mapView)
         
-        mapView.mapboxMap.onEvery(.styleDataLoaded) { (event) in
+        mapView.mapboxMap.onEvery(event: .styleDataLoaded) { (event) in
 //            guard let data = event.data as? [String: Any],
 //                  let type = data["type"]
 //            else {
@@ -96,8 +96,8 @@ public class TT2MapView: UIView {
 
     func dismissLoadingScreen() {
         UIView.animate(withDuration: 0.5, animations: {
-                self.loadingView?.alpha = 0.0
-                self.loadingIndicator?.alpha = 0.0
+            self.loadingView?.alpha = 0.0
+            self.loadingIndicator?.alpha = 0.0
         }) { (_) in
             self.loadingView?.removeFromSuperview()
             self.loadingView?.alpha = 1.0

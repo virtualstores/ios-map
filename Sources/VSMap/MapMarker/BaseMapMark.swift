@@ -11,22 +11,46 @@ import CoreGraphics
 import UIKit
 
 public class BaseMapMark: MapMark {
-  public var id: String
-  public var itemPosition: ItemPosition
-  public var triggerRadius: Double?
-  public var data: Any?
-  public var clusterable: Bool
-  public var deletable: Bool
-  public var defaultVisibility: Bool
-  public var focused: Bool
+  public let id: String
+  public let position: CGPoint
+  public let offset: CGVector = .zero
+  public let floorLevelId: Int64?
+  public let triggerRadius: Double?
+  public let data: Any?
+  public let clusterable: Bool
+  public let defaultVisibility: Bool
+  public let focused: Bool
+
+  public let type: MapMarkType
+  public var itemPosition: ItemPosition?
   public var scale: Double = 1.0
 
-  public var text: String?
-  public var imageUrl: String?
+  public enum MapMarkType {
+    case imageUrl(String)
+    case text(String)
+  }
 
-  public var position: CGPoint { itemPosition.point }
-  public var offset: CGVector { itemPosition.offset }
-  public var floorLevelId: Int64 { itemPosition.floorLevelId }
+  public init(
+    id: String,
+    position: CGPoint,
+    floorLevelId: Int64,
+    triggerRadius: Double? = nil,
+    data: Any? = nil,
+    clusterable: Bool,
+    defaultVisibility: Bool,
+    focused: Bool,
+    type: MapMarkType
+  ) {
+    self.id = id
+    self.position = position
+    self.floorLevelId = floorLevelId
+    self.triggerRadius = triggerRadius
+    self.data = data
+    self.clusterable = clusterable
+    self.defaultVisibility = defaultVisibility
+    self.focused = focused
+    self.type = type
+  }
 
   public init(
     id: String,
@@ -34,26 +58,24 @@ public class BaseMapMark: MapMark {
     triggerRadius: Double? = nil,
     data: Any? = nil,
     clusterable: Bool,
-    deletable: Bool,
     defaultVisibility: Bool,
     focused: Bool,
-    text: String?,
-    imageUrl: String?
+    type: MapMarkType
   ) {
     self.id = id
+    self.position = itemPosition.point
+    self.floorLevelId = itemPosition.floorLevelId
     self.itemPosition = itemPosition
     self.triggerRadius = triggerRadius
     self.data = data
     self.clusterable = clusterable
-    self.deletable = deletable
     self.defaultVisibility = defaultVisibility
     self.focused = focused
-    self.text = text
-    self.imageUrl = imageUrl
+    self.type = type
   }
 
   public func createViewHolder(completion: @escaping (MapMarkViewHolder) -> ()) {
-    let marker =  MapMarkViewHolder(id: self.id)
+    let marker =  MapMarkViewHolder(id: id)
 
     createMarker { (image) in
       marker.renderedBitmap = image
@@ -64,16 +86,18 @@ public class BaseMapMark: MapMark {
   private func createMarker(completion: @escaping (UIImage) -> Void) {
     guard let view = MarkerView.loadNib(for: MarkerView.self, bundle: .module) else { return }
 
-    if let imageUrl = imageUrl/*, !imageUrl.isEmpty*/ {
-      view.imageView.load(url: imageUrl) { _ in
-//        completion(view.asImage().resizeImage(scale: self.scale))
+    switch type {
+    case .imageUrl(let url):
+      view.imageView.load(url: url) { _ in
         let image = view.asImage()
-        completion(image.resizeImage(targetSize: image.size * self.scale))
+        let scale = image.size * self.scale
+        completion(image.resizeImage(targetSize: scale))
       }
-    } else {
-      view.label.text = text ?? id
+    case .text(let text):
+      view.label.text = text
       let image = view.asImage()
-      completion(image.resizeImage(targetSize: image.size * self.scale))
+      let scale = image.size * self.scale
+      completion(image.resizeImage(targetSize: scale))
     }
   }
 }
