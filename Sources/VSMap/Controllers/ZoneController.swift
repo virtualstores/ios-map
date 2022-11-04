@@ -307,7 +307,17 @@ extension ZoneController: IZoneController {
   }
 
   func hideTextLayer() {
-    try? mapRepository.style.updateLayer(withId: LAYER_ZONE_TEXT, type: SymbolLayer.self) { $0.visibility = .constant(.none) }
+    do {
+      try mapRepository.style.updateLayer(withId: LAYER_ZONE_TEXT, type: SymbolLayer.self) { $0.visibility = .constant(.none) }
+    } catch {
+      //print(Date(), error)
+      let layer = try? mapRepository.style.layer(withId: LAYER_ZONE_TEXT) as? SymbolLayer
+      if layer?.visibility != .constant(.none) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+          self.hideTextLayer()
+        }
+      }
+    }
   }
 
   func showFillLayer() {

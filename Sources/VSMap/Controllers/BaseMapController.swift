@@ -72,6 +72,11 @@ public class BaseMapController: IMapController {
         shelfController = ShelfController(mapRepository: mapRepository)
     }
 
+    // maybe just be able to send new useraccuracylevel parameters?
+    public func setNew(mapOptions: VSFoundation.MapOptions) {
+      mapRepository.mapOptions = mapOptions
+    }
+
     public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
         if changedFloor {
             markerController.onFloorChange(mapRepository: mapRepository)
@@ -97,7 +102,6 @@ public class BaseMapController: IMapController {
             switch result {
             case .success(let style):
                 self?.onStyleLoaded(style: style)
-                self?.mapViewContainer.dismissLoadingScreen()
             case let .failure(error):
                 Logger.init(verbosity: .debug).log(message: "The map failed to load the style: \(error.localizedDescription)")
                 self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
@@ -140,7 +144,9 @@ public class BaseMapController: IMapController {
         styleLoaded = true
         locationController.setOptions(options: mapView.location.options)
         locationController.updateUserLocation(newLocation: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0), std: 0.0)
+
         mapDataLoadedPublisher.send(true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [self] in mapViewContainer.dismissLoadingScreen() }
     }
 
     @objc func handleTap(gesture: UITapGestureRecognizer) {

@@ -24,6 +24,7 @@ public class BaseMapMark: MapMark {
   public let type: MapMarkType
   public var itemPosition: ItemPosition?
   public var scale: Double = 1.0
+  public var alpha: Double = 1.0
 
   public enum MapMarkType {
     case imageUrl(String)
@@ -88,16 +89,16 @@ public class BaseMapMark: MapMark {
 
     switch type {
     case .imageUrl(let url):
-      view.imageView.load(url: url) { _ in
+      view.imageView.load(url: url) { [self] _ in
         let image = view.asImage()
         let scale = image.size * self.scale
-        completion(image.resizeImage(targetSize: scale))
+        completion(image.alpha(alpha).resizeImage(targetSize: scale))
       }
     case .text(let text):
       view.label.text = text
       let image = view.asImage()
       let scale = image.size * self.scale
-      completion(image.resizeImage(targetSize: scale))
+      completion(image.alpha(alpha).resizeImage(targetSize: scale))
     }
   }
 }
@@ -136,6 +137,14 @@ extension UIImageView {
 }
 
 extension UIImage {
+  func alpha(_ value:CGFloat) -> UIImage {
+    UIGraphicsBeginImageContextWithOptions(size, false, scale)
+    draw(at: CGPoint.zero, blendMode: .normal, alpha: value)
+    let newImage = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return newImage!
+  }
+
   func resizeImage(targetSize: CGSize) -> UIImage {
     let size = size
 

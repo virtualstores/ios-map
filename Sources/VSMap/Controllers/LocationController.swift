@@ -38,11 +38,11 @@ class LocationController: ILocation, LocationProvider {
     // MARK: ILocation implementation
     public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Float?) {
         guard var std = std else { return }
-        if mapRepository.mapOptions.userMark.userMarkerType == .heading { std = max(5.0, std) }
-
-        let convertedStd = converter.convertFromMetersToMapMeters(input: Double(std * 1.645))
+        let minAccuracy = min(7, std * 1.645)
+        let maxAccuracy = max(5.0, minAccuracy)
+        if mapRepository.mapOptions.userMark.userMarkerType == .heading { std =  maxAccuracy }
+        let convertedStd = converter.convertFromMetersToMapMeters(input: Double(std))
         let accuracy = CLLocationAccuracy(convertedStd)
-
         let location = CLLocation(coordinate: newLocation, altitude: 1.0, horizontalAccuracy: accuracy, verticalAccuracy: 1.0, timestamp: Date())
 
         delegate?.locationProvider(self, didUpdateLocations: [location])
