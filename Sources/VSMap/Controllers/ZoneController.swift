@@ -8,6 +8,7 @@
 import Foundation
 import MapboxMaps
 import VSFoundation
+import Combine
 
 class ZoneController {
   private let DEFAULT_STYLE_WALLS_LAYER = "walls"
@@ -46,7 +47,10 @@ class ZoneController {
   private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   private var zoneStyle: VSFoundation.MapOptions.ZoneStyle { mapOptions.zoneStyle }
   private var sharedProperties: SharedZoneProperties?
+
   public private(set) var zones: [Zone] = []
+  public var onEnterPublisher: CurrentValueSubject<Zone?, Never> = .init(nil)
+  public var onExitPublisher: CurrentValueSubject<Zone?, Never> = .init(nil)
 
   private var zoneTextFeatures: [String : Feature] = [:]
 //  private var zoneTextMarks = mutableMapOf<String, TT2Feature>()

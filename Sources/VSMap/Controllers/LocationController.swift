@@ -40,7 +40,7 @@ class LocationController: ILocation, LocationProvider {
         guard var std = std else { return }
         let minAccuracy = min(7, std * 1.645)
         let maxAccuracy = max(5.0, minAccuracy)
-        if mapRepository.mapOptions.userMark.userMarkerType == .heading { std =  maxAccuracy }
+        if mapRepository.mapOptions.userMark.userMarkerType == .heading { std = maxAccuracy }
         let convertedStd = converter.convertFromMetersToMapMeters(input: Double(std))
         let accuracy = CLLocationAccuracy(convertedStd)
         let location = CLLocation(coordinate: newLocation, altitude: 1.0, horizontalAccuracy: accuracy, verticalAccuracy: 1.0, timestamp: Date())
