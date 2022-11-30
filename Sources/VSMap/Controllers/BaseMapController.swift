@@ -103,7 +103,7 @@ public class BaseMapController: IMapController {
             case .success(let style):
                 self?.onStyleLoaded(style: style)
             case let .failure(error):
-                Logger.init(verbosity: .debug).log(message: "The map failed to load the style: \(error.localizedDescription)")
+                Logger(verbosity: .error).log(message: "The map failed to load the style: \(error.localizedDescription)")
                 self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
             }
         }
@@ -156,19 +156,22 @@ public class BaseMapController: IMapController {
 
     private func setupUserMarker() {
         guard styleLoaded else { return }
-        let image = UIImage(named: "userMarker", in: .module, compatibleWith: nil)//mapRepository.mapOptions.mapStyle.userMarkerImage
-        let image1 = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil)
-        let image2 = UIImage(named: "userMarker-shadow", in: .module, compatibleWith: nil)
 
-        let scale = 1.5
-        if let userMarkerImage = image, mapRepository.mapOptions.userMark.userMarkerType == .bullsEye {
+        let scale = 1.0
+        let image2 = UIImage(named: "userMarker-shadow", in: .module, compatibleWith: nil)
+        switch mapRepository.mapOptions.userMark.userMarkerType {
+        case .bullsEye:
+            guard let userMarkerImage = UIImage(named: "userMarker", in: .module, compatibleWith: nil) else { return }
             let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true)
             mapView.location.options.puckType = .puck2D(config)
-        } else if let image = image1, let shadow = image2, mapRepository.mapOptions.userMark.userMarkerType == .heading {
-            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true)
+        case .heading:
+            guard let image = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil), let shadow = image2 else { return }
+            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: UIColor(red: 0.537, green: 0.812, blue: 0.941, alpha: 0.4))
             mapView.location.options.puckType = .puck2D(config)
-        } else {
-            mapView.location.options.puckType = .puck2D()
+        case .accuracy:
+            guard let shadow = image2 else { return }
+            let config = Puck2DConfiguration(topImage: shadow, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: UIColor(red: 0.537, green: 0.812, blue: 0.941, alpha: 0.4))
+            mapView.location.options.puckType = .puck2D(config)
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
