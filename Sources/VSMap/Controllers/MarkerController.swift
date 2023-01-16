@@ -271,12 +271,12 @@ class MarkerController: IMarkerController {
     }
     
     func updateLocation(newLocation: CGPoint, precision: Float) {
-        let coordinate = newLocation.convertFromMeterToLatLng(converter: converter)
-        markers.forEach { (key, value) in
-            if self.setTransparentMarkers(coordinate: coordinate, marker: value) {
-                refreshMarkers()
-            }
-        }
+//        let coordinate = newLocation.convertFromMeterToLatLng(converter: converter)
+//        markers.forEach { (key, value) in
+//            if self.setTransparentMarkers(coordinate: coordinate, marker: value) {
+//                refreshMarkers()
+//            }
+//        }
     }
 
     func setTransparentMarkers(coordinate: CLLocationCoordinate2D, marker: MapMark) -> Bool {
