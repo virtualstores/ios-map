@@ -89,41 +89,26 @@ class CameraController: ICameraController {
         let width = converter.convertFromMetersToMapCoordinate(input: rtls.widthInMeters)
         let height = converter.convertFromMetersToMapCoordinate(input: rtls.heightInMeters)
 
-        let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height)))
 //      print("Area", rtls.widthInMeters, rtls.heightInMeters, rtls.widthInMeters * rtls.heightInMeters, rtls.widthInMeters * rtls.heightInMeters / .pi)
       //Area 93.17 112.4 10472.308 3333.439167561601 IKEA delft markethall
         let cameraPadding = converter.convertFromMetersToMapCoordinate(input: 10)
         let cameraBounds: CoordinateBounds
 
-        if rtls.widthInMeters > rtls.heightInMeters {
-            let modifiedMapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 1.5)), size: CGSize(width: width, height: height * 4.0)))
-            let sw = modifiedMapBounds.southwest
-            let ne = modifiedMapBounds.northeast
-            cameraBounds = CoordinateBounds(
-                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
-                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
-            )
+        if let boundingBox = rtls.boundingBoxInMeters {
+            let mapBounds = CoordinateBounds(rect: boundingBox.asCGRectWithPadding.convertFromMeterToLatLng(converter: converter))
+            cameraBounds = boundingBox.padding == .zero ? mapBounds.add(padding: cameraPadding) : mapBounds
+        } else if rtls.widthInMeters > rtls.heightInMeters {
+            cameraBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 1.5)), size: CGSize(width: width, height: height * 4.0))).add(padding: cameraPadding)
         } else if rtls.widthInMeters > (rtls.heightInMeters * 0.6) {
-            let modifiedMapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 0.8)), size: CGSize(width: width, height: height * 2.5)))
-            let sw = modifiedMapBounds.southwest
-            let ne = modifiedMapBounds.northeast
-            cameraBounds = CoordinateBounds(
-                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
-                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
-            )
+            cameraBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: -(height * 0.8)), size: CGSize(width: width, height: height * 2.5))).add(padding: cameraPadding)
         } else {
-            let sw = mapBounds.southwest
-            let ne = mapBounds.northeast
-            cameraBounds = CoordinateBounds(
-                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
-                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
-            )
+            cameraBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height))).add(padding: cameraPadding)
         }
         
         try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
 
         let padding = 20.0
-        let camera = mapView.mapboxMap.camera(for: mapBounds, padding: UIEdgeInsets(top: padding, left: padding, bottom: padding, right: padding), bearing: 0, pitch: 0)
+        let camera = mapView.mapboxMap.camera(for: cameraBounds, padding: UIEdgeInsets(top: padding, left: padding, bottom: padding, right: padding), bearing: 0, pitch: 0)
 
         mapView.camera.ease(to: camera, duration: 0.4)
     }
@@ -171,5 +156,14 @@ extension CameraController: GestureManagerDelegate {
     
     public func gestureManager(_ gestureManager: GestureManager, didEndAnimatingFor gestureType: GestureType) {
 //        Logger.init(verbosity: .debug).log(message: "didEndAnimatingFor")
+    }
+}
+
+extension CoordinateBounds {
+    func add(padding: Double) -> CoordinateBounds {
+        CoordinateBounds(
+            southwest: CLLocationCoordinate2D(latitude: southwest.latitude - padding, longitude: southwest.longitude - padding),
+            northeast: CLLocationCoordinate2D(latitude: northeast.latitude + padding, longitude: northeast.longitude + padding)
+        )
     }
 }

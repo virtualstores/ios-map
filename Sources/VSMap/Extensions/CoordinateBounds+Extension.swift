@@ -30,18 +30,18 @@ extension CoordinateBounds {
         var maxLon = Double.infinity
         var minLat = -Double.infinity
         var maxLat = Double.infinity
-        for point in coordinates {
-            if point.longitude < minLon {
-                minLon = point.longitude
+        coordinates.forEach { (coordinate) in
+            if coordinate.longitude < minLon {
+                minLon = coordinate.longitude
             }
-            if point.longitude > maxLon {
-                maxLon = point.longitude
+            if coordinate.longitude > maxLon {
+                maxLon = coordinate.longitude
             }
-            if point.latitude < minLat {
-                minLat = point.latitude
+            if coordinate.latitude < minLat {
+                minLat = coordinate.latitude
             }
-            if point.latitude > maxLat {
-                maxLat = point.latitude
+            if coordinate.latitude > maxLat {
+                maxLat = coordinate.latitude
             }
         }
         self.init(

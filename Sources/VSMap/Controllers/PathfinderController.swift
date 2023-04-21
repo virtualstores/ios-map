@@ -10,6 +10,7 @@ import VSFoundation
 import Combine
 import CoreGraphics
 import MapboxMaps
+import Turf
 
 class PathfinderController {
   let SOURCE_ID_HEAD = "pathfinding-source-head"
@@ -98,7 +99,7 @@ class PathfinderController {
 
   var pathfinder: IFoundationPathfinder? {
     didSet {
-      self.bindPublishers()
+      bindPublishers()
     }
   }
 
@@ -107,6 +108,7 @@ class PathfinderController {
   var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
   var floorLevelId: Int64 { mapRepository.floorLevelId }
+  var latestRefreshLines: Date = Date()
 
   init(mapRepository: MapRepository) {
     self.mapRepository = mapRepository
@@ -122,9 +124,7 @@ class PathfinderController {
   }
 
   func initSources() {
-    guard _lineSourceHead == nil else {
-      return
-    }
+    guard _lineSourceHead == nil else { return }
 
     _lineSourceHead = GeoJSONSource()
     _lineSourceHead?.data = .empty
@@ -205,35 +205,45 @@ class PathfinderController {
     )
   }
 
-  var latestRefresh: Date = Date()
   func onNewPosition(position: CGPoint) {
     updateLocation(newLocation: position)
-    guard Date().timeIntervalSince(self.latestRefresh) > 1.0 else { return }
-    refreshLines()
+    guard Date().timeIntervalSince(latestRefreshLines) > 0.5, currentPosition != position else { return }
+    currentPosition = position
+    refreshLines(body: false, tail: false)
   }
 
-  private func refreshLines() {
-    DispatchQueue.main.async {
-      guard !self.allGoals.isEmpty else {
-        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
-        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
-        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
-        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.lineString(LineString([]))))
+  var currentPosition: CGPoint?
+  var currentCoordinate: CLLocationCoordinate2D? { currentPosition?.convertFromMeterToLatLng(converter: converter) }
+  private func refreshLines(head: Bool = true, body: Bool = true, tail: Bool = true) {
+    DispatchQueue.main.async { [self] in
+      guard !allGoals.isEmpty else {
+        try? style.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
+        try? style.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
+        try? style.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
+        try? style.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .geometry(.lineString(LineString([]))))
         return
       }
 
-      self.latestRefresh = Date()
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(self.currentHeadPath))))
-      if self.mapOptions.pathfindingStyle.showPathfindingBody {
-        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(self.currentBodyPath))))
-      }
-      if self.mapOptions.pathfindingStyle.showPathfindingTail {
-        try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(self.currentTailPath))))
+      latestRefreshLines = Date()
+      if head {
+        try? style.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(slice(path: currentHeadPath, coordinate: currentCoordinate ?? CLLocationCoordinate2D()) ?? currentHeadPath))))
+        if let coordinate = currentHeadPath.last {
+          try? style.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .geometry(.point(Point(coordinate))))
+        }
       }
 
-      guard let coordinate = self.currentHeadPath.last else { return }
-      try? self.style.updateGeoJSONSource(withId: self.SOURCE_ID_END, geoJSON: .geometry(.point(Point(coordinate))))
+      if body, mapOptions.pathfindingStyle.showPathfindingBody {
+        try? style.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(currentBodyPath))))
+      }
+
+      if tail, mapOptions.pathfindingStyle.showPathfindingTail {
+        try? style.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(currentTailPath))))
+      }
     }
+  }
+
+  func slice(path: [CLLocationCoordinate2D], coordinate: CLLocationCoordinate2D) -> [CLLocationCoordinate2D]? {
+    Turf.LineString(path).sliced(from: coordinate)?.coordinates
   }
 
   func bindPublishers() {
@@ -327,14 +337,14 @@ extension PathfinderController: IPathfindingController {
 //      DispatchQueue.main.async {
 //        completion()
 //      }
-//    })
+//    })  
 
     let goals = filterGoals(forFloorLevel: false)
     var filteredGoals = filterGoals()
     goals.forEach { goal in
       guard let floorLevelId = goal.floorLevelId else { return }
       if floorLevelId != mapRepository.floorLevelId {
-        guard let swapLocation = mapRepository.swapLocations[self.floorLevelId]?.first, filteredGoals.contains(where: { $0.id.contains(swapLocation.name) }) else { return }
+        guard let swapLocation = mapRepository.swapLocations[self.floorLevelId]?.first, let name = swapLocation.name, filteredGoals.contains(where: { $0.id.contains(name) }) else { return }
         filteredGoals.append(swapLocation.point.asPathfindingGoal(floorLevelId: self.floorLevelId))
       }
     }
@@ -361,6 +371,11 @@ extension PathfinderController: IPathfindingController {
 
   func remove(goals: [PathfindingGoal], completion: @escaping (() -> Void)) {
     pathfinder?.remove(goals: goals.map { $0.asGoal }, completion: completion)
+    refreshLines()
+  }
+
+  func removeAll(completion: @escaping () -> Void) {
+    pathfinder?.set(goals: [], completion: completion)
     refreshLines()
   }
 

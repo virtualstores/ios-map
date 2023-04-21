@@ -16,33 +16,23 @@ public class BaseMapController: IMapController {
     public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
 
     public var location: ILocation {
-        guard let location = internalLocation else { fatalError("Map not loaded") }
-
+        guard let location = internalLocation else { fatalError("Location not loaded") }
         return location
     }
 
     public var camera: ICameraController {
         guard let camera = cameraController else { fatalError("Camera not loaded") }
-
         return camera
     }
-    
-    public var marker: IMarkerController {
-//        guard let marker = markerController else { fatalError("marker not loaded") }
-        
-        return markerController
-    }
 
+    public var marker: IMarkerController { markerController }
     public var path: IPathfindingController { pathfinderController }
-
     public var zone: IZoneController { zoneController }
-
     public var shelf: IShelfController { shelfController }
     
     private var locationController: LocationController {
-        guard let internalLocation = internalLocation else { fatalError("location not loaded") }
-        
-        return internalLocation
+        guard let location = internalLocation else { fatalError("Location not loaded") }
+        return location
     }
 
     private var mapData: MapData { mapRepository.mapData }
@@ -94,7 +84,7 @@ public class BaseMapController: IMapController {
         self.mapRepository.mapData = mapData
 
         guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
-        self.styleLoaded = false
+        styleLoaded = false
         mapViewContainer.mapStyle = self.mapRepository.mapOptions.mapStyle
         mapViewContainer.addLoadingView()
         mapRepository.map = mapView.mapboxMap
@@ -158,19 +148,27 @@ public class BaseMapController: IMapController {
         guard styleLoaded else { return }
 
         let scale = 1.0
+        let userMark = mapRepository.mapOptions.userMark
         let image2 = UIImage(named: "userMarker-shadow", in: .module, compatibleWith: nil)
-        switch mapRepository.mapOptions.userMark.userMarkerType {
+        switch userMark.userMarkerType {
         case .bullsEye:
             guard let userMarkerImage = UIImage(named: "userMarker", in: .module, compatibleWith: nil) else { return }
-            let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true)
+            //guard let userMarkerImage = UIImage(named: "userMarker", in: .module, compatibleWith: nil)?.withColor(.red) else { return }
+            let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
             mapView.location.options.puckType = .puck2D(config)
         case .heading:
-            guard let image = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil), let shadow = image2 else { return }
-            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: UIColor(red: 0.537, green: 0.812, blue: 0.941, alpha: 0.4))
+            guard let image = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil)?.withColor(.red), let shadow = image2 else { return }
+//            image.withRenderingMode(.alwaysTemplate)
+//            image.withTintColor(.red)
+//            image.withTintColor(.red, renderingMode: .alwaysOriginal)
+            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
             mapView.location.options.puckType = .puck2D(config)
         case .accuracy:
             guard let shadow = image2 else { return }
-            let config = Puck2DConfiguration(topImage: shadow, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: UIColor(red: 0.537, green: 0.812, blue: 0.941, alpha: 0.4))
+            let config = Puck2DConfiguration(topImage: shadow, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
+            mapView.location.options.puckType = .puck2D(config)
+        case .custom(let image):
+            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
             mapView.location.options.puckType = .puck2D(config)
         }
 
@@ -196,7 +194,7 @@ public class BaseMapController: IMapController {
 
         let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
 
-        location.updateUserLocation(newLocation: mapPosition, std: std)
+        locationController.updateUserLocation(newLocation: mapPosition, std: std)
         cameraController?.updateLocation(with: mapPosition, direction: direction)
         markerController.updateLocation(newLocation: position, precision: std)
         pathfinderController.onNewPosition(position: position)
@@ -206,7 +204,7 @@ public class BaseMapController: IMapController {
     var direction: Double = .zero
     public func updateUserDirection(newDirection: Double) {
         direction = newDirection
-        location.updateUserDirection(newDirection: newDirection)
+        locationController.updateUserDirection(newDirection: newDirection)
     }
 
     public func stop() {
@@ -223,4 +221,18 @@ public class BaseMapController: IMapController {
     }
 
     public func reset() { }
+}
+
+extension UIImage {
+    func withColor(_ color: UIColor) -> UIImage? {
+        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        let drawRect = CGRect(x: 0,y: 0,width: size.width,height: size.height)
+        color.setFill()
+        UIRectFill(drawRect)
+        draw(in: drawRect, blendMode: .destinationIn, alpha: 1)
+
+        let tintedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return tintedImage!
+    }
 }

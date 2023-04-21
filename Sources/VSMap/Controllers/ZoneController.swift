@@ -124,13 +124,13 @@ class ZoneController {
       if let point = zone.navigationPoint {
         let coordinate = point.convertFromMeterToLatLng(converter: converter)
         let textStyle = zoneStyle.textStyle
-        let textColor = zone.properties.textColor ?? sharedProperties?.textColor ?? textStyle.textColor.asHex
-        let textColorSelected = zone.properties.textColorSelected ?? sharedProperties?.textColorSelected ?? textStyle.textColorSelected.asHex
-        let textSize = zone.properties.textSize ?? sharedProperties?.textSize ?? textStyle.textMaxSize
-        let textOpacity = zone.properties.textOpacity ?? sharedProperties?.textOpacity ?? textStyle.textOpacity
-        let textAllowOverlap = zone.properties.textAllowOverLap ?? sharedProperties?.textAllowOverLap ?? textStyle.textAllowOverLap
-        let textAnchor = zone.properties.textAnchor ?? sharedProperties?.textAnchor ?? textStyle.textAnchor
-        let textIgnorePlacement = zone.properties.textIgnorePlacement ?? sharedProperties?.textIgnorePlacement ?? textStyle.textIgnorePlacement
+        let textColor = zone.navigationPointProperties?.textColor ?? zone.properties.textColor ?? sharedProperties?.textColor ?? textStyle.textColor.asHex
+        let textColorSelected = zone.navigationPointProperties?.textColorSelected ?? zone.properties.textColorSelected ?? sharedProperties?.textColorSelected ?? textStyle.textColorSelected.asHex
+        let textSize = zone.navigationPointProperties?.textSize ?? zone.properties.textSize ?? sharedProperties?.textSize ?? textStyle.textMaxSize
+        let textOpacity = zone.navigationPointProperties?.textOpacity ?? zone.properties.textOpacity ?? sharedProperties?.textOpacity ?? textStyle.textOpacity
+        let textAllowOverlap = zone.navigationPointProperties?.textAllowOverLap ?? zone.properties.textAllowOverLap ?? sharedProperties?.textAllowOverLap ?? textStyle.textAllowOverLap
+        let textAnchor = zone.navigationPointProperties?.textAnchor ?? zone.properties.textAnchor ?? sharedProperties?.textAnchor ?? textStyle.textAnchor
+        let textIgnorePlacement = zone.navigationPointProperties?.textIgnorePlacement ?? zone.properties.textIgnorePlacement ?? sharedProperties?.textIgnorePlacement ?? textStyle.textIgnorePlacement
         var textFeature = Feature(geometry: .point(Point(coordinate)))
         textFeature.properties = JSONObject()
         textFeature.properties?[PROP_ZONE_ID] = .string(zone.id)
@@ -205,19 +205,19 @@ class ZoneController {
     _zoneTextLayer?.source = SOURCE_ZONE_TEXT
     _zoneTextLayer?.textField = .expression(Exp(.get) { PROP_ZONE_NAME })
     _zoneTextLayer?.textMaxWidth = .constant(5)
-    _zoneTextLayer?.textSize = .expression(Exp(.get) { PROP_ZONE_TEXT_SIZE })
-//    _zoneTextLayer?.textSize = .expression(
-//      // Produce a continuous, smooth series of values
-//      // between pairs of input and output values
-//      Exp(.interpolate) {
-//        // Set the interpolation type
-//        Exp(.exponential) { 1.0 }
-//        // Get current zoom level
-//        Exp(.zoom)
-//        // Use the stops defined above
-//        textSizeStops
-//      }
-//    )
+    //_zoneTextLayer?.textSize = .expression(Exp(.get) { PROP_ZONE_TEXT_SIZE })
+    _zoneTextLayer?.textSize = .expression(
+      // Produce a continuous, smooth series of values
+      // between pairs of input and output values
+      Exp(.interpolate) {
+        // Set the interpolation type
+        Exp(.exponential) { 1.0 }
+        // Get current zoom level
+        Exp(.zoom)
+        // Use the stops defined above
+        textSizeStops
+      }
+    )
     _zoneTextLayer?.textColor = .expression(
       Exp(.switchCase) {
         Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }

@@ -41,7 +41,7 @@ class LocationController: ILocation, LocationProvider {
         let minAccuracy = min(7, std * 1.645)
         let maxAccuracy = max(5.0, minAccuracy)
         switch mapRepository.mapOptions.userMark.userMarkerType {
-        case .bullsEye: std = std * 1.645
+        case .bullsEye, .custom(_): std = std * 1.645
         case .heading: std = maxAccuracy
         case .accuracy: std = 5.0
         }
