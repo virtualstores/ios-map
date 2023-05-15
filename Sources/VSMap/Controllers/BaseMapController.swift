@@ -155,6 +155,8 @@ public class BaseMapController: IMapController {
             guard let userMarkerImage = UIImage(named: "userMarker", in: .module, compatibleWith: nil) else { return }
             //guard let userMarkerImage = UIImage(named: "userMarker", in: .module, compatibleWith: nil)?.withColor(.red) else { return }
             let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
+            var configPulsing = Puck2DConfiguration(topImage: userMarkerImage, pulsing: Puck2DConfiguration.Pulsing(/*color: .white,*/ radius: .accuracy), showsAccuracyRing: true)
+            configPulsing.accuracyRingBorderColor = .white
             mapView.location.options.puckType = .puck2D(config)
         case .heading:
             guard let image = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil)?.withColor(.red), let shadow = image2 else { return }
@@ -165,7 +167,7 @@ public class BaseMapController: IMapController {
             mapView.location.options.puckType = .puck2D(config)
         case .accuracy:
             guard let shadow = image2 else { return }
-            let config = Puck2DConfiguration(topImage: shadow, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
+            let config = Puck2DConfiguration(topImage: shadow, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha), accuracyRingBorderColor: .white)
             mapView.location.options.puckType = .puck2D(config)
         case .custom(let image):
             let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))

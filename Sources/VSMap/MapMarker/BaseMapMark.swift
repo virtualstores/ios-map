@@ -89,7 +89,10 @@ public class BaseMapMark: MapMark {
 
     switch type {
     case .imageUrl(let url):
-      view.imageView.load(url: url) { [self] _ in
+      view.imageView.load(url: url) { [self] (error) in
+        if let error = error {
+          print("Error loading image for MapMark: \(id)", error)
+        }
         let image = view.asImage()
         let scale = image.size * self.scale
         completion(image.alpha(alpha).resizeImage(targetSize: scale))
@@ -126,11 +129,9 @@ extension UIImageView {
 
   func load(url: String, completion: @escaping (Error?) -> Void = { (_) in }) {
     if let url = URL(string: url) {
-      self.load(url: url) { (error) in
-        completion(error)
-      }
+      load(url: url, completion: completion)
     } else {
-      self.image = UIImage(named: "no_image_available", in: .module, with: nil)
+      image = UIImage(named: "no_image_available", in: .module, with: nil)
       completion(nil)
     }
   }
