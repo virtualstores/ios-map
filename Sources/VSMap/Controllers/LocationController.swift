@@ -36,18 +36,20 @@ class LocationController: ILocation, LocationProvider {
     }
     
     // MARK: ILocation implementation
-    public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Float?) {
-        guard var std = std else { return }
-        let minAccuracy = min(7, std * 1.645)
-        let maxAccuracy = max(5.0, minAccuracy)
+    public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Double) {
+        let accuracy: Double
         switch mapRepository.mapOptions.userMark.userMarkerType {
-        case .bullsEye, .custom(_): std = std * 1.645
-        case .heading: std = maxAccuracy
-        case .accuracy: std = 5.0
+        case .bullsEye, .custom(_): accuracy = max(1.5, std * 1.645)
+        case .heading: accuracy = max(5.0, min(7.0, std * 1.645))
+        case .accuracy: accuracy = 5.0
         }
-        let convertedStd = converter.convertFromMetersToMapMeters(input: Double(std))
-        let accuracy = CLLocationAccuracy(convertedStd)
-        let location = CLLocation(coordinate: newLocation, altitude: 1.0, horizontalAccuracy: accuracy, verticalAccuracy: 1.0, timestamp: Date())
+        let location = CLLocation(
+          coordinate: newLocation,
+          altitude: 1.0,
+          horizontalAccuracy: CLLocationAccuracy(converter.convertFromMetersToMapMeters(input: accuracy)),
+          verticalAccuracy: 1.0,
+          timestamp: Date()
+        )
 
         delegate?.locationProvider(self, didUpdateLocations: [location])
     }
@@ -95,18 +97,18 @@ class LocationController: ILocation, LocationProvider {
 // MARK: LocationProviderDelegate
 extension LocationController: LocationProviderDelegate {
     public func locationProvider(_ provider: LocationProvider, didUpdateLocations locations: [CLLocation]) {
-        Logger.init().log(message: "locationProvider didUpdateLocations")
+        Logger().log(message: "locationProvider didUpdateLocations")
     }
     
     public func locationProvider(_ provider: LocationProvider, didUpdateHeading newHeading: CLHeading) {
-        Logger.init().log(message: "locationProvider didUpdateHeading")
+        Logger().log(message: "locationProvider didUpdateHeading")
     }
     
     public func locationProvider(_ provider: LocationProvider, didFailWithError error: Error) {
-        Logger.init().log(message: "locationProvider didFailWithError")
+        Logger().log(message: "locationProvider didFailWithError")
     }
     
     public func locationProviderDidChangeAuthorization(_ provider: LocationProvider) {
-        Logger.init().log(message: "locationProvider didFailWithError")
+        Logger().log(message: "locationProvider didFailWithError")
     }
 }

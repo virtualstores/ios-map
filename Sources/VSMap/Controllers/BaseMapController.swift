@@ -191,7 +191,7 @@ public class BaseMapController: IMapController {
         }
     }
 
-    public func updateUserLocation(newLocation: CGPoint?, std: Float?) {
+    public func updateUserLocation(newLocation: CGPoint?, std: Double?) {
         guard let position = newLocation, let std = std, styleLoaded else { return }
 
         let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
