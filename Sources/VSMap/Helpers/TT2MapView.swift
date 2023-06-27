@@ -63,6 +63,7 @@ public class TT2MapView: UIView {
         }
 
         DispatchQueue.main.async {
+            loadingView.alpha = 0.8
             self.mapView.addSubview(loadingView)
         }
     }

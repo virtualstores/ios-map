@@ -26,7 +26,7 @@ public class BaseMapController: IMapController {
     }
 
     public var marker: IMarkerController { markerController }
-    public var path: IPathfindingController { pathfinderController }
+    public var path: IPathfinderController { pathfinderController }
     public var zone: IZoneController { zoneController }
     public var shelf: IShelfController { shelfController }
     
@@ -67,7 +67,7 @@ public class BaseMapController: IMapController {
       mapRepository.mapOptions = mapOptions
     }
 
-    public func setup(pathfinder: IFoundationPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
+    public func setup(pathfinder: IPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
         if changedFloor {
             markerController.onFloorChange(mapRepository: mapRepository)
             pathfinderController.onFloorChange(mapRepository: mapRepository)
@@ -100,10 +100,10 @@ public class BaseMapController: IMapController {
     }
 
     public func start() {
-        mapViewContainer.addLoadingView()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            self.setupUserMarker()
-        }
+        if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { mapViewContainer.addLoadingView() }
+        //DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        //    self.setupUserMarker()
+        //}
     }
 
     private func onStyleLoaded(style: Style) {
@@ -150,30 +150,28 @@ public class BaseMapController: IMapController {
         let scale = 1.0
         let userMark = mapRepository.mapOptions.userMark
         let image2 = UIImage(named: "userMarker-shadow", in: .module, compatibleWith: nil)
+        let config: Puck2DConfiguration
         switch userMark.userMarkerType {
         case .bullsEye:
             guard let userMarkerImage = UIImage(named: "userMarker", in: .module, compatibleWith: nil) else { return }
             //guard let userMarkerImage = UIImage(named: "userMarker", in: .module, compatibleWith: nil)?.withColor(.red) else { return }
-            let config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
+            config = Puck2DConfiguration(topImage: userMarkerImage, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
             var configPulsing = Puck2DConfiguration(topImage: userMarkerImage, pulsing: Puck2DConfiguration.Pulsing(/*color: .white,*/ radius: .accuracy), showsAccuracyRing: true)
             configPulsing.accuracyRingBorderColor = .white
-            mapView.location.options.puckType = .puck2D(config)
         case .heading:
             guard let image = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil)?.withColor(.red), let shadow = image2 else { return }
 //            image.withRenderingMode(.alwaysTemplate)
 //            image.withTintColor(.red)
 //            image.withTintColor(.red, renderingMode: .alwaysOriginal)
-            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
-            mapView.location.options.puckType = .puck2D(config)
+            config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
         case .accuracy:
             guard let shadow = image2 else { return }
-            let config = Puck2DConfiguration(topImage: shadow, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha), accuracyRingBorderColor: .white)
-            mapView.location.options.puckType = .puck2D(config)
+            config = Puck2DConfiguration(topImage: shadow, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha), accuracyRingBorderColor: .white)
         case .custom(let image):
-            let config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
-            mapView.location.options.puckType = .puck2D(config)
+            config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: nil, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
         }
 
+        mapView.location.options.puckType = .puck2D(config)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             self.mapViewContainer.dismissLoadingScreen()
         }
@@ -191,10 +189,21 @@ public class BaseMapController: IMapController {
         }
     }
 
+    var date = Date()
     public func updateUserLocation(newLocation: CGPoint?, std: Double?) {
         guard let position = newLocation, let std = std, styleLoaded else { return }
+        if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { setupUserMarker() }
 
         let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
+
+        //if Date().timeIntervalSince(date) > 0.5 {
+        //  try? mapView.mapboxMap.style.updateLayer(withId: "puck", type: LocationIndicatorLayer.self) {
+        //    $0.location = .constant([mapPosition.latitude, mapPosition.longitude, 0.0])
+        //    $0.accuracyRadius = .constant(1.5)
+        //    $0.perspectiveCompensation = .constant(1.0)
+        //  }
+        //  date = Date()
+        //}
 
         locationController.updateUserLocation(newLocation: mapPosition, std: std)
         cameraController?.updateLocation(with: mapPosition, direction: direction)

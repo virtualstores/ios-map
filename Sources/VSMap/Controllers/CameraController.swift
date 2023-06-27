@@ -79,6 +79,7 @@ class CameraController: ICameraController {
 //            try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
             
             self.actualCameraMode = mode
+            //mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: 8, bearing: .heading, pitch: 25)))
         }
     }
     

@@ -20,7 +20,7 @@ extension Goal.GoalType {
 }
 
 extension Goal {
-  var asPathfindeingGoal: PathfindingGoal {
+  var asGoal: PathfindingGoal {
     PathfindingGoal(id: id, position: position, data: data, type: type.asPathfindingGoalType, floorLevelId: floorLevelId)
   }
 

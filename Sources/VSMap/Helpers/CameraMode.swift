@@ -110,7 +110,7 @@ internal class ThreeDimensionalMode: CameraMode {
     var rtlsOptions: RtlsOptions?
     let zoomLevel: Double
     var direction: Double = .zero
-    var lastLocation: CLLocationCoordinate2D = CLLocationCoordinate2D()
+    var lastLocation: CLLocationCoordinate2D?
 
     init(mapView: MapView, zoomLevel: Double) {
         self.mapView = mapView
@@ -132,6 +132,7 @@ internal class ThreeDimensionalMode: CameraMode {
     }
     
     private func moveCameraToUser() {
+        guard let lastLocation = lastLocation else { return }
         var camera = self.mapView.cameraState
         
         camera.center = lastLocation
@@ -144,7 +145,7 @@ internal class ThreeDimensionalMode: CameraMode {
         }
         
         DispatchQueue.main.async {
-            self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 0.1)
+            self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
         }
     }
 }
