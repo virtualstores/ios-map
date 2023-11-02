@@ -121,7 +121,7 @@ public class BaseMapController: IMapController {
         mapView.location.locationProvider.startUpdatingLocation()
         mapView.location.locationProvider.startUpdatingHeading()
         mapView.location.options.activityType = .other
-        mapView.location.options.puckBearingSource = .heading
+        mapView.location.options.puckBearing = .heading
 
         mapView.ornaments.compassView.isHidden = true
         mapView.ornaments.scaleBarView.isHidden = true
