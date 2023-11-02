@@ -29,8 +29,15 @@ class CameraController: ICameraController {
     public init(mapView: MapView, mapRepository: MapRepository) {
         self.mapView = mapView
         self.mapRepository = mapRepository
+        if defaultCamera == nil {
+            createCamera()
+        }
     }
-    
+
+    deinit {
+        defaultCamera = nil
+    }
+
     func setInitialCameraMode(for mode: CameraModes) {
         createCameraMode(for: mode)
     }
@@ -54,36 +61,45 @@ class CameraController: ICameraController {
     }
     
     private func createCameraMode(for mode: CameraModes) {
+        setCameraBounds(for: mode)
         switch mode {
         case .free:
             self.actualCameraMode = FreeMode()
         case .containMap:
             self.actualCameraMode = ContainMapMode(with: self)
-        case .threeDimensional(let zoomLevel):
-            let mode =  ThreeDimensionalMode(mapView: mapView, zoomLevel: zoomLevel ?? 8)
+        case .followUser3D(let zoomLevel):
             let rtls = mapRepository.mapData.rtlsOptions
-            let converter = mapRepository.mapData.converter
-
-            let width = converter.convertFromMetersToMapCoordinate(input: rtls.widthInMeters)
-            let height = converter.convertFromMetersToMapCoordinate(input: rtls.heightInMeters)
-
-            let mapBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height)))
-            let cameraPadding = converter.convertFromMetersToMapCoordinate(input: 10)
-            let cameraBounds: CoordinateBounds
-            let sw = mapBounds.southwest
-            let ne = mapBounds.northeast
-            cameraBounds = CoordinateBounds(
-                southwest: CLLocationCoordinate2D(latitude: sw.latitude - cameraPadding, longitude: sw.longitude - cameraPadding),
-                northeast: CLLocationCoordinate2D(latitude: ne.latitude + cameraPadding, longitude: ne.longitude + cameraPadding)
-            )
-//            try? self.mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
-            
-            self.actualCameraMode = mode
+            let squareMeters = rtls.boundingBoxInMeters?.squareMeters ?? rtls.squareMeters
+            self.actualCameraMode = FollowUser3D(mapView: mapView, zoomLevel: zoomLevel ?? FollowUser3DOptions().getZoomLevelForArea(mapSquareMeters: squareMeters))
             //mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: 8, bearing: .heading, pitch: 25)))
         }
     }
     
     func resetCameraToMapBounds() {
+        guard let camera = defaultCamera else {
+            createCamera()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.resetCameraToMapBounds() }
+            return
+        }
+        mapView.camera.ease(
+          to: mapView.mapboxMap.camera(for: camera.bounds, padding: .zero, bearing: camera.bearing, pitch: 0),
+          duration: 0.4
+        )
+    }
+    
+    func resetCameraToMapMode() {
+        if !(actualCameraMode is ContainMapMode), let cameraMode = requestedCameraMode {
+            self.createCameraMode(for: cameraMode)
+        } else {
+            self.resetCameraToMapBounds()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.resetCameraToMapBounds()
+            }
+        }
+    }
+
+    var defaultCamera: (bounds: CoordinateBounds, bearing: Double)?
+    func createCamera() {
         let rtls = mapRepository.mapData.rtlsOptions
         let converter = mapRepository.mapData.converter
 
@@ -97,7 +113,10 @@ class CameraController: ICameraController {
         var bearing: Double = 0.0
         if let boundingBox = rtls.boundingBoxInMeters {
             bearing = rtls.id == 76 ? 90 : 0
-            let padding = bearing != 0 ? boundingBox.padding.multiply(with: 10) : boundingBox.padding
+            var padding = bearing != 0 ? boundingBox.padding.multiply(with: 10) : boundingBox.padding
+            if rtls.widthInMeters > rtls.heightInMeters && bearing == 0.0 {
+                padding = padding.multiply(width: 12, height: 16)
+            }
             let bottomLeft = boundingBox.bottomLeftPoint.add(x: -padding.left, y: -padding.bottom).convertFromMeterToLatLng(converter: converter)
             let topRight = boundingBox.topRightPoint.add(x: padding.right, y: padding.top).convertFromMeterToLatLng(converter: converter)
             cameraBounds = CoordinateBounds(southwest: bottomLeft, northeast: topRight)
@@ -108,23 +127,23 @@ class CameraController: ICameraController {
         } else {
             cameraBounds = CoordinateBounds(rect: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height))).add(padding: cameraPadding)
         }
+        defaultCamera = (cameraBounds, bearing)
+    }
 
-        try? mapView.mapboxMap.setCameraBounds(with: CameraBoundsOptions(bounds: cameraBounds, minZoom: 0.0))
-        let camera = mapView.mapboxMap.camera(for: cameraBounds, padding: .zero, bearing: bearing, pitch: 0)
-        mapView.camera.ease(to: camera, duration: 0.4)
-    }
-    
-    func resetCameraToMapMode() {
-        if let cameraMode = requestedCameraMode, !(actualCameraMode is ContainMapMode) {
-            self.createCameraMode(for: cameraMode)
-        } else {
-            self.resetCameraToMapBounds()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.resetCameraToMapBounds()
-            }
+    func setCameraBounds(for mode: CameraModes) {
+        let bounds: CoordinateBounds?
+        switch mode {
+        case .containMap, .free: bounds = defaultCamera?.bounds
+        case .followUser3D(_): bounds = CoordinateBounds(southwest: CLLocationCoordinate2D(latitude: -90, longitude: -180), northeast: CLLocationCoordinate2D(latitude: 90, longitude: 180))
         }
+        try? mapView.mapboxMap.setCameraBounds(with: createCameraBoundsOptions(bounds: bounds))
     }
-    
+
+    func createCameraBoundsOptions(bounds: CoordinateBounds?) -> CameraBoundsOptions {
+        let options = mapRepository.mapOptions.mapStyle
+        return CameraBoundsOptions(bounds: bounds, maxZoom: options.maxZoomLevel, minZoom: options.minZoomLevel)
+    }
+
     private func revertCameraModeAfter(interval: Double) {
         self.revertCameraModeTimer?.invalidate()
         self.revertCameraModeTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false, block: { (_) in
@@ -167,4 +186,16 @@ extension CoordinateBounds {
             northeast: CLLocationCoordinate2D(latitude: northeast.latitude + padding, longitude: northeast.longitude + padding)
         )
     }
+}
+
+extension RtlsOptions {
+  var squareMeters: Double { widthInMeters * heightInMeters }
+}
+
+extension RtlsOptions.BoundingBox {
+  var squareMeters: Double {
+    let width = bottomLeftPoint.distance(to: bottomRightPoint)
+    let height = bottomLeftPoint.distance(to: topLeftPoint)
+    return width * height
+  }
 }

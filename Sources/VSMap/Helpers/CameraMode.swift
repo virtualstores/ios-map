@@ -104,7 +104,7 @@ internal class ContainMapMode: CameraMode {
 }
 
 // MARK: ThreeDimensionalMode
-internal class ThreeDimensionalMode: CameraMode {
+internal class FollowUser3D: CameraMode {
     let mapView: MapView
     var camera: CameraController?
     var rtlsOptions: RtlsOptions?
@@ -148,4 +148,22 @@ internal class ThreeDimensionalMode: CameraMode {
             self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
         }
     }
+}
+
+struct FollowUser3DOptions {
+  let zoomLevels: [SquareMeterRange] = [
+    SquareMeterRange(range: Range(uncheckedBounds: (0.0, 500.0)), zoomLevel: 8.5),
+    SquareMeterRange(range: Range(uncheckedBounds: (501.0, 1000.0)), zoomLevel: 8.0)
+  ]
+  let defaultZoomLevel: Double = 7.5
+  let cameraTilt: Double = 25.0
+
+  func getZoomLevelForArea(mapSquareMeters: Double) -> Double {
+    zoomLevels.first(where: { $0.range.contains(mapSquareMeters) })?.zoomLevel ?? defaultZoomLevel
+  }
+
+  struct SquareMeterRange {
+    let range: Range<Double>
+    let zoomLevel: Double
+  }
 }
