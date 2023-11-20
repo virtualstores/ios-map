@@ -29,25 +29,27 @@ public class BaseMapController: IMapController {
     public var path: IPathfinderController { pathfinderController }
     public var zone: IZoneController { zoneController }
     public var shelf: IShelfController { shelfController }
-    
+    public var mlPosition: IMLPositionLineController { mlPositionController }
+
     private var locationController: LocationController {
         guard let location = internalLocation else { fatalError("Location not loaded") }
         return location
     }
 
+    //Controllers for helping baseController to setup map
+    private let markerController: MarkerController
+    private let pathfinderController: PathfinderController
+    private let zoneController: ZoneController
+    private let shelfController: ShelfController
+    private let mlPositionController: MLPositionLineController
+    private var internalLocation: LocationController?
+    private var cameraController: CameraController?
+
+    private let mapRepository: MapRepository = MapRepository()
+    private let mapViewContainer: TT2MapView
+
     private var mapData: MapData { mapRepository.mapData }
     private var mapView: MapView { mapViewContainer.mapView }
-
-    //Controllers for helping baseController to setup map
-    var internalLocation: LocationController?
-    var cameraController: CameraController?
-    var markerController: MarkerController
-    var pathfinderController: PathfinderController
-    var zoneController: ZoneController
-    var shelfController: ShelfController
-    
-    private var mapRepository = MapRepository()
-    private var mapViewContainer: TT2MapView
 
     private var styleLoaded: Bool = false
 
@@ -60,6 +62,7 @@ public class BaseMapController: IMapController {
         pathfinderController = PathfinderController(mapRepository: mapRepository)
         zoneController = ZoneController(mapRepository: mapRepository)
         shelfController = ShelfController(mapRepository: mapRepository)
+        mlPositionController = MLPositionLineController(mapRepository: mapRepository)
     }
 
     // maybe just be able to send new useraccuracylevel parameters?
@@ -116,6 +119,7 @@ public class BaseMapController: IMapController {
         pathfinderController.onStyleUpdated()
         zoneController.onStyleUpdated()
         shelfController.onStyleUpdated()
+        mlPositionController.onStyleUpdated()
 
         mapView.location.overrideLocationProvider(with: locationController)
         mapView.location.locationProvider.startUpdatingLocation()
@@ -160,9 +164,9 @@ public class BaseMapController: IMapController {
             configPulsing.accuracyRingBorderColor = .white
         case .heading:
             guard let image = UIImage(named: "userMarker-arrow", in: .module, compatibleWith: nil)?.withColor(.red), let shadow = image2 else { return }
-//            image.withRenderingMode(.alwaysTemplate)
-//            image.withTintColor(.red)
-//            image.withTintColor(.red, renderingMode: .alwaysOriginal)
+            //image.withRenderingMode(.alwaysTemplate)
+            //image.withTintColor(.red)
+            //image.withTintColor(.red, renderingMode: .alwaysOriginal)
             config = Puck2DConfiguration(topImage: image, bearingImage: nil, shadowImage: shadow, scale: .constant(scale), showsAccuracyRing: true, accuracyRingColor: userMark.activeAccuracyStyle.color.withAlphaComponent(userMark.activeAccuracyStyle.alpha))
         case .accuracy:
             guard let shadow = image2 else { return }
@@ -210,6 +214,11 @@ public class BaseMapController: IMapController {
         markerController.updateLocation(newLocation: position, precision: std)
         pathfinderController.onNewPosition(position: position)
         zoneController.updateLocation(newLocation: position)
+    }
+
+    public func updateMLPosition(point: CGPoint) {
+      guard styleLoaded else { return }
+      mlPositionController.onNewPosition(position: point)
     }
 
     var direction: Double = .zero
