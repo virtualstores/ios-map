@@ -102,6 +102,10 @@ public class BaseMapController: IMapController {
         }
     }
 
+    public func initRealWorldConverter() {
+
+    }
+
     public func start() {
         if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { mapViewContainer.addLoadingView() }
         //DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -216,9 +220,14 @@ public class BaseMapController: IMapController {
         zoneController.updateLocation(newLocation: position)
     }
 
+    private var realConverter: ICoordinateConverterReal?
     public func updateMLPosition(point: CGPoint) {
       guard styleLoaded else { return }
-      mlPositionController.onNewPosition(position: point)
+      if let converter = realConverter {
+        mlPositionController.onNewPosition(coordinate: point.convertFromMeterToLatLng(converter: converter))
+      } else {
+        mlPositionController.onNewPosition(coordinate: point.convertFromMeterToLatLng(converter: mapData.converter))
+      }
     }
 
     var direction: Double = .zero

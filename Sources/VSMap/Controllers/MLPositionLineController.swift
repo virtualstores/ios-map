@@ -74,15 +74,15 @@ private extension MLPositionLineController {
 }
 
 internal extension MLPositionLineController {
-  func onNewPosition(position: CGPoint) {
+  func onNewPosition(coordinate: CLLocationCoordinate2D) {
     //if let last = currentPath.last {
     //  let distance = last.fromLatLngToMeter(converter: converter).distance(to: position)
     //  if distance > largestDistance { largestDistance = distance }
     //  print("Distance", largestDistance, distance)
     //}
-    if position.distance(to: lastPosition) >= 2 { reset() }
-    currentPath.append(position.convertFromMeterToLatLng(converter: converter))
-    lastPosition = position
+    //if position.distance(to: lastPosition) >= 2 { reset() }
+    currentPath.append(coordinate)
+    //lastPosition = position
     refreshLines()
   }
 
