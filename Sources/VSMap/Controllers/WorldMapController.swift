@@ -193,10 +193,13 @@ public class WorldMapController: IMapController {
   }
 
   private var realConverter: ICoordinateConverterReal?
+  public var convertedMLPostionPublisher: CurrentValueSubject<CLLocationCoordinate2D?, Never> = .init(nil)
   public func updateMLPosition(point: CGPoint) {
     guard styleLoaded else { return }
     if let converter = realConverter {
-      mlPositionController.onNewPosition(coordinate: point.convertFromMeterToLatLng(converter: converter))
+      let coordinate = point.convertFromMeterToLatLng(converter: converter)
+      mlPositionController.onNewPosition(coordinate: coordinate)
+      convertedMLPostionPublisher.send(coordinate)
     } else {
       mlPositionController.onNewPosition(coordinate: point.convertFromMeterToLatLng(converter: mapData.converter))
     }

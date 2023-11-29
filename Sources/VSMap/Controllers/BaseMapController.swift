@@ -15,6 +15,8 @@ import Combine
 public class BaseMapController: IMapController {
     public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
 
+    public var convertedMLPostionPublisher: CurrentValueSubject<CLLocationCoordinate2D?, Never> = .init(nil)
+
     public var location: ILocation {
         guard let location = internalLocation else { fatalError("Location not loaded") }
         return location
