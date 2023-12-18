@@ -12,7 +12,7 @@ import VSFoundation
 import MapboxMaps
 import Combine
 
-public class WorldMapController: IMapController {
+public class WorldMapController: IMapController {  
   public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
 
   public var location: ILocation {
@@ -90,7 +90,7 @@ public class WorldMapController: IMapController {
     mapViewContainer.mapStyle = self.mapRepository.mapOptions.mapStyle
     mapViewContainer.addLoadingView()
     mapRepository.map = mapView.mapboxMap
-    mapView.mapboxMap.loadStyleURI(.outdoors) { [weak self] result in
+    mapView.mapboxMap.loadStyleURI(.satellite) { [weak self] result in
       switch result {
       case .success(let style):
         self?.onStyleLoaded(style: style)
@@ -99,17 +99,6 @@ public class WorldMapController: IMapController {
         self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
       }
     }
-  }
-
-  public func initRealWorldConverter() {
-    guard let location = lastLocation, let heading = location.heading else { return }
-    print("HEADING", heading)
-    realConverter = RealCoordinateConverter(
-      latLngOrigin: location.coordinate,
-      mapAngleInDegrees: 0.0,
-      earthRadiusInMeters: 6378137.0,
-      pixelsPerMeter: 50
-    )
   }
 
   public func start() {
@@ -156,7 +145,27 @@ public class WorldMapController: IMapController {
 
   @objc func handleTap(gesture: UITapGestureRecognizer) {
     let location = gesture.location(in: mapView)
+    //print("LOCATION", location)
+    //let coordinate = mapView.mapboxMap.coordinate(for: location)
+    //print("MAPBOXMAP COORDINATE", coordinate)
+    //initRealWorldConverter()
+    //if let converter = realConverter {
+    //  print("GESTURE COORDINATE", location.convertFromMeterToLatLng(converter: converter))
+    //  if let location = self.lastLocationPublisher.value?.coordinate {
+    //    print("LAST LOCATION", location)
+    //  }
+    //}
     markerController.onClick(point: location)
+  }
+
+  public func getCoordinate(point: CGPoint) -> CLLocationCoordinate2D {
+    let coordinate = mapView.mapboxMap.coordinate(for: point)
+    //print("CONVERTED COORDINATE", "(\(coordinate.latitude), \(coordinate.longitude))")
+    //if let location = self.lastLocationPublisher.value?.coordinate {
+    //  print("LAST LOCATION", "       (\(location.latitude), \(location.longitude))")
+    //  print("EQUALS", coordinate == location)
+    //}
+    return coordinate
   }
 
   private func setupUserMarker() {
@@ -193,16 +202,19 @@ public class WorldMapController: IMapController {
   }
 
   private var realConverter: ICoordinateConverterReal?
-  public var convertedMLPostionPublisher: CurrentValueSubject<CLLocationCoordinate2D?, Never> = .init(nil)
   public func updateMLPosition(point: CGPoint) {
     guard styleLoaded else { return }
     if let converter = realConverter {
       let coordinate = point.convertFromMeterToLatLng(converter: converter)
-      mlPositionController.onNewPosition(coordinate: coordinate)
-      convertedMLPostionPublisher.send(coordinate)
+      updateMLPosition(coordinate: coordinate)
     } else {
-      mlPositionController.onNewPosition(coordinate: point.convertFromMeterToLatLng(converter: mapData.converter))
+      updateMLPosition(coordinate: point.convertFromMeterToLatLng(converter: mapData.converter))
     }
+  }
+
+  public func updateMLPosition(coordinate: CLLocationCoordinate2D) {
+    guard styleLoaded else { return }
+    mlPositionController.onNewPosition(coordinate: coordinate)
   }
 
   var direction: Double = .zero
@@ -213,9 +225,12 @@ public class WorldMapController: IMapController {
 
   public func stop() {}
 
-  public func reset() { }
+  public func reset() {
+    mlPositionController.reset()
+  }
 
   var lastLocation: Location?
+  public var currentGPSCoordinate: CLLocationCoordinate2D? { lastLocation?.coordinate }
 
   public var lastLocationPublisher: CurrentValueSubject<Location?, Never> = .init(nil)
 }

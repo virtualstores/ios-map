@@ -15,8 +15,6 @@ import Combine
 public class BaseMapController: IMapController {
     public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
 
-    public var convertedMLPostionPublisher: CurrentValueSubject<CLLocationCoordinate2D?, Never> = .init(nil)
-
     public var location: ILocation {
         guard let location = internalLocation else { fatalError("Location not loaded") }
         return location
@@ -104,8 +102,9 @@ public class BaseMapController: IMapController {
         }
     }
 
-    public func initRealWorldConverter() {
-
+    public var currentGPSCoordinate: CLLocationCoordinate2D?
+    public func getCoordinate(point: CGPoint) -> CLLocationCoordinate2D {
+      CLLocationCoordinate2D()
     }
 
     public func start() {
@@ -232,6 +231,10 @@ public class BaseMapController: IMapController {
       }
     }
 
+    public func updateMLPosition(coordinate: CLLocationCoordinate2D) {
+      mlPositionController.onNewPosition(coordinate: coordinate)
+    }
+
     var direction: Double = .zero
     public func updateUserDirection(newDirection: Double) {
         direction = newDirection
@@ -251,7 +254,9 @@ public class BaseMapController: IMapController {
         }
     }
 
-    public func reset() { }
+    public func reset() {
+      mlPositionController.reset()
+    }
 }
 
 extension UIImage {

@@ -22,7 +22,7 @@ public class TT2MapView: UIView {
         
         mapView = MapView(frame: self.bounds, mapInitOptions: myMapInitOptions)
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        self.addSubview(mapView)
+        insertSubview(mapView, at: 0)
         
         mapView.mapboxMap.onEvery(event: .styleDataLoaded) { (event) in
 //            guard let data = event.data as? [String: Any],

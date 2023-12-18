@@ -11,13 +11,15 @@ import VSFoundation
 import MapboxMaps
 import SwiftUI
 
-class WorldCameraController: ICameraController {
+public class WorldCameraController: ICameraController {
   public var requestedCameraMode: CameraModes?
-  public var actualCameraMode: CameraMode? {
+  var actualCameraMode: CameraMode? {
     didSet {
       actualCameraMode?.onEnter()
     }
   }
+
+  public var cameraState: CameraState { mapView.cameraState }
 
   private var mapView: MapView
   private var mapRepository: MapRepository
@@ -48,10 +50,16 @@ class WorldCameraController: ICameraController {
     revertCameraInterval = milliseconds
   }
 
-  func resetCameraMode() { createCameraMode() }
+  public func resetCameraMode() { createCameraMode() }
 
   private func createCameraMode() {
-    mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: 16, bearing: .heading, pitch: 25)))
+    switch requestedCameraMode {
+    case .free:
+      mapView.viewport.idle()
+      mapView.mapboxMap.setCamera(to: CameraOptions(pitch: 0.0))
+    case .none, .containMap, .followUser3D(_):
+      mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: 16, bearing: .heading, pitch: 25)))
+    }
   }
 
   private func revertCameraModeAfter(interval: Double) {
