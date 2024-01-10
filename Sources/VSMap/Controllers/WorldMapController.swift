@@ -90,7 +90,7 @@ public class WorldMapController: IMapController {
     mapViewContainer.mapStyle = self.mapRepository.mapOptions.mapStyle
     mapViewContainer.addLoadingView()
     mapRepository.map = mapView.mapboxMap
-    mapView.mapboxMap.loadStyleURI(.satellite) { [weak self] result in
+    mapView.mapboxMap.loadStyleURI(.streets) { [weak self] result in
       switch result {
       case .success(let style):
         self?.onStyleLoaded(style: style)
@@ -229,15 +229,20 @@ public class WorldMapController: IMapController {
     mlPositionController.reset()
   }
 
-  var lastLocation: Location?
-  public var currentGPSCoordinate: CLLocationCoordinate2D? { lastLocation?.coordinate }
-
   public var lastLocationPublisher: CurrentValueSubject<Location?, Never> = .init(nil)
+  public var currentGPSCoordinate: CLLocationCoordinate2D? { lastLocationPublisher.value?.coordinate }
+  public var lastMLCoordinate: CLLocationCoordinate2D? { mlPositionController.currentPath.last }
+  public var distanceBetweenGPSML: Double? {
+    guard
+      let gpsCoordinate = currentGPSCoordinate,
+      let mlCoordinate = lastMLCoordinate
+    else { return nil }
+    return gpsCoordinate.distance(to: mlCoordinate)
+  }
 }
 
 extension WorldMapController: LocationConsumer {
   public func locationUpdate(newLocation: MapboxMaps.Location) {
-    lastLocation = newLocation
     lastLocationPublisher.send(newLocation)
   }
 }

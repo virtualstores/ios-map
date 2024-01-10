@@ -15,7 +15,7 @@ class MLPositionLineController {
   let LAYER_ID = "ml-position"
 
   private var mapRepository: MapRepository
-  private var currentPath: [CLLocationCoordinate2D] = []
+  private(set) var currentPath: [CLLocationCoordinate2D] = []
 
   private var _lineSource: GeoJSONSource?
   private var lineSource: GeoJSONSource {
