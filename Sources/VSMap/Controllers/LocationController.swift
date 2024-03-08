@@ -41,7 +41,7 @@ class LocationController: ILocation, LocationProvider {
         switch mapRepository.mapOptions.userMark.userMarkerType {
         case .bullsEye, .custom(_): accuracy = max(1.5, std * 1.645)
         case .heading: accuracy = max(5.0, min(7.0, std * 1.645))
-        case .accuracy: accuracy = 2.0
+        case .accuracy: accuracy = 1.5
         //case .accuracy: accuracy = std
         }
         let location = CLLocation(

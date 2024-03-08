@@ -24,16 +24,16 @@ public class TT2MapView: UIView {
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         insertSubview(mapView, at: 0)
         
-        mapView.mapboxMap.onEvery(event: .styleDataLoaded) { (event) in
+//        mapView.mapboxMap.onEvery(event: .styleDataLoaded) { (event) in
 //            guard let data = event.data as? [String: Any],
 //                  let type = data["type"]
 //            else {
 //                Logger.init(verbosity: .debug).log(message: "styleDataLoaded success")
 //                return
 //            }
-            
+
 //            Logger.init(verbosity: .debug).log(message: "The map has finished loading style data of type = \(type)")
-        }
+//        }
         
 //        mapView.mapboxMap.onNext(.styleLoaded) { (event) in
 //            Logger.init(verbosity: .debug).log(message: "The map has finished loading style ... Event = \(event)")
