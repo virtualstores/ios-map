@@ -192,6 +192,7 @@ class PathfinderController {
   }
 
   func onNewPosition(position: CGPoint) {
+    guard !allGoals.isEmpty else { return }
     updateLocation(newLocation: position)
     guard Date().timeIntervalSince(latestRefreshLines) > 0.5, currentPosition != position else { return }
     currentPosition = position

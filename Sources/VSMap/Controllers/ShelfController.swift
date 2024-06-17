@@ -152,19 +152,19 @@ class ShelfController: IShelfController {
   func updateMarkedShelves() {
     shelvesMarkedFeatures.removeAll()
     shelves.filter { $0.isMarked }.forEach { (shelf) in
+      guard let name = shelf.name else { return }
       let avgX = shelf.shape.map { $0.x }.reduce(0, +) / CGFloat(shelf.shape.count)
       let avgY = shelf.shape.map { $0.y }.reduce(0, +) / CGFloat(shelf.shape.count)
       let coordinate = CGPoint(x: avgX, y: avgY).convertFromMeterToLatLng(converter: converter)
 
       var feature = Feature(geometry: .point(Point(coordinate)))
-
-      feature.identifier = .string(shelf.name)
+      feature.identifier = .string(name)
       feature.properties = JSONObject()
       feature.properties?[PROP_SELECTED] = .boolean(shelf.isSelected)
       feature.properties?[PROP_VISIBLE] = .boolean(shelf.isVisible)
       feature.properties?[PROP_MARKED] = .boolean(shelf.isMarked)
 
-      self.shelvesMarkedFeatures[shelf.name] = feature
+      self.shelvesMarkedFeatures[name] = feature
     }
     refreshShelves()
   }
@@ -172,18 +172,18 @@ class ShelfController: IShelfController {
   func updateShelves() {
     shelvesFeatures.removeAll()
     shelves.forEach { (shelf) in
+      guard let name = shelf.name else { return }
       let clockwisePoints = sortVerticiesClockwise(points: shelf.shape)
       let coordinates = clockwisePoints.map { $0.convertFromMeterToLatLng(converter: converter) }
 
       var feature = Feature(geometry: .multiPoint(MultiPoint(coordinates)))
-
-      feature.identifier = .string(shelf.name)
+      feature.identifier = .string(name)
       feature.properties = JSONObject()
       feature.properties?[PROP_SELECTED] = .boolean(shelf.isSelected)
       feature.properties?[PROP_VISIBLE] = .boolean(shelf.isVisible)
       feature.properties?[PROP_MARKED] = .boolean(shelf.isMarked)
 
-      self.shelvesFeatures[shelf.name] = feature
+      self.shelvesFeatures[name] = feature
     }
     refreshShelves()
   }

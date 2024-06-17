@@ -235,7 +235,13 @@ public class BaseMapController: IMapController {
     }
 
     public func updateMLPosition(coordinate: CLLocationCoordinate2D) {
+      guard styleLoaded else { return }
       mlPositionController.onNewPosition(coordinate: coordinate)
+    }
+
+    public func updateParticlePositions(positions: [CGPoint]) {
+      guard styleLoaded else { return }
+      mlPositionController.onNewParticles(coordinates: positions.map({ $0.convertFromMeterToLatLng(converter: mapData.converter) }))
     }
 
     var direction: Double = .zero

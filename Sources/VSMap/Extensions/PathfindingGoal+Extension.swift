@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  PathfindingGoal+Extension.swift
 //  
 //
 //  Created by Hripsime on 2022-03-30.

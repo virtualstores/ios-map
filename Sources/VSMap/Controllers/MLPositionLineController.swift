@@ -13,9 +13,12 @@ import VSFoundation
 class MLPositionLineController {
   let SOURCE_ID = "ml-position-source"
   let LAYER_ID = "ml-position"
+  let CIRCLE_SOURCE_ID = "particle-circle-source"
+  let CIRCLE_LAYER_ID = "particle-circle"
 
   private var mapRepository: MapRepository
   private(set) var currentPath: [CLLocationCoordinate2D] = []
+  private(set) var particleCoordinates = [CLLocationCoordinate2D]()
 
   private var _lineSource: GeoJSONSource?
   private var lineSource: GeoJSONSource {
@@ -27,6 +30,18 @@ class MLPositionLineController {
   private var lineLayer: LineLayer {
     guard let lineLayer = _lineLayer else { fatalError("ERROOOOOOR") }
     return lineLayer
+  }
+
+  private var _circleSource: GeoJSONSource?
+  private var circleSource: GeoJSONSource {
+    guard let circleSource = _circleSource else { fatalError("ERROOOOOOOOOR!") }
+    return circleSource
+  }
+
+  private var _circleLayer: CircleLayer?
+  private var circleLayer: CircleLayer {
+    guard let circleLayer = _circleLayer else { fatalError("ERROOOOOOR") }
+    return circleLayer
   }
 
   private var converter: ICoordinateConverter { mapRepository.mapData.converter }
@@ -64,11 +79,34 @@ private extension MLPositionLineController {
         ]
       }
     )
+
+    _circleSource = GeoJSONSource()
+    _circleSource?.data = .empty
+
+    _circleLayer = CircleLayer(id: CIRCLE_LAYER_ID)
+    _circleLayer?.source = CIRCLE_SOURCE_ID
+    _circleLayer?.circleColor = .constant(.init(.purple))
+    _circleLayer?.circleRadius = .expression(
+      Exp(.interpolate) {
+        Exp(.exponential) { 2 }
+        Exp(.zoom)
+        [
+          0.0: 0,
+          22.0 : 20_000
+        ]
+      }
+    )
   }
 
   func refreshLines() {
     DispatchQueue.main.async { [self] in
       try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.lineString(LineString(currentPath))))
+    }
+  }
+
+  func refreshCircle() {
+    DispatchQueue.main.async { [self] in
+      try? style.updateGeoJSONSource(withId: CIRCLE_SOURCE_ID, geoJSON: .geometry(.multiPoint(MultiPoint(particleCoordinates))))
     }
   }
 }
@@ -86,8 +124,14 @@ internal extension MLPositionLineController {
     refreshLines()
   }
 
+  func onNewParticles(coordinates: [CLLocationCoordinate2D]) {
+    particleCoordinates = coordinates
+    refreshCircle()
+  }
+
   func reset() {
     currentPath.removeAll()
+    particleCoordinates.removeAll()
   }
 
   func onStyleUpdated() {
@@ -95,16 +139,36 @@ internal extension MLPositionLineController {
 
     try? style.addSource(lineSource, id: SOURCE_ID)
     try? style.addLayer(lineLayer, layerPosition: LayerPosition.below("marker-layer"))
+    try? style.addSource(circleSource, id: CIRCLE_SOURCE_ID)
+    try? style.addLayer(circleLayer, layerPosition: LayerPosition.below("marker-layer"))
     hide()
   }
 }
 
 extension MLPositionLineController: IMLPositionLineController {
   public func show() {
-    try? style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    showMLPath()
+    showParticles()
   }
 
   public func hide() {
+    hideMLPath()
+    hideParticles()
+  }
+
+  public func showMLPath() {
+    try? style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+  }
+
+  public func showParticles() {
+    try? style.updateLayer(withId: CIRCLE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+  }
+
+  public func hideMLPath() {
     try? style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.none) }
+  }
+
+  public func hideParticles() {
+    try? style.updateLayer(withId: CIRCLE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 }

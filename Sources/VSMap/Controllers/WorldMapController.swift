@@ -12,7 +12,7 @@ import VSFoundation
 import MapboxMaps
 import Combine
 
-public class WorldMapController: IMapController {  
+public class WorldMapController: IMapController {
   public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
 
   public var location: ILocation {
@@ -216,6 +216,8 @@ public class WorldMapController: IMapController {
     guard styleLoaded else { return }
     mlPositionController.onNewPosition(coordinate: coordinate)
   }
+
+  public func updateParticlePositions(positions: [CGPoint]) {}
 
   var direction: Double = .zero
   public func updateUserDirection(newDirection: Double) {
