@@ -54,7 +54,43 @@ class LocationController: ILocation, LocationProvider {
 
         delegate?.locationProvider(self, didUpdateLocations: [location])
     }
-    
+
+    public func updateUserLocation(location: VPSOutputSignal.LatLngPosition.Location) {
+        let location = CLLocation(
+          coordinate: location.coordinate,
+          altitude: location.altitude ?? 0.0,
+          horizontalAccuracy: location.accuracy ?? 0.0,
+          verticalAccuracy: 1.0,
+          timestamp: Date()
+        )
+
+        delegate?.locationProvider(self, didUpdateLocations: [location])
+    }
+  
+    public func updateUserLocation(latLng: VPSOutputSignal.LatLngPosition) {
+        let location: CLLocation
+        switch latLng.reliableSource {
+        case .gps, .undefined:
+          location = CLLocation(
+            coordinate: latLng.gpsLocation.coordinate,
+            altitude: latLng.gpsLocation.altitude ?? 0.0,
+            horizontalAccuracy: latLng.gpsLocation.accuracy ?? 0.0,
+            verticalAccuracy: 1.0,
+            timestamp: Date()
+          )
+        case .vpsML:
+          location = CLLocation(
+            coordinate: latLng.mlLocation.coordinate,
+            altitude: latLng.mlLocation.altitude ?? 0.0,
+            horizontalAccuracy: 5.0,
+            verticalAccuracy: 1.0,
+            timestamp: Date()
+          )
+        }
+
+        delegate?.locationProvider(self, didUpdateLocations: [location])
+    }
+
     public func updateUserDirection(newDirection: Double) {
         let heading = TT2CLHeading()
         heading._trueHeading = newDirection

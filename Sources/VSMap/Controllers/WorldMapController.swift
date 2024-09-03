@@ -47,13 +47,14 @@ public class WorldMapController: IMapController {
 
   private let mapRepository: MapRepository = MapRepository()
   private let mapViewContainer: TT2MapView
+  private let displayMultiplePositions: Bool
 
   private var mapData: MapData { mapRepository.mapData }
   private var mapView: MapView { mapViewContainer.mapView }
 
   private var styleLoaded: Bool = false
 
-  public init(with token: String, view: TT2MapView, mapOptions: VSFoundation.MapOptions) {
+  public init(with token: String, view: TT2MapView, mapOptions: VSFoundation.MapOptions, displayMultiplePositions: Bool = false) {
     self.mapViewContainer = view
     self.mapViewContainer.setup(with: token)
 
@@ -63,6 +64,7 @@ public class WorldMapController: IMapController {
     zoneController = ZoneController(mapRepository: mapRepository)
     shelfController = ShelfController(mapRepository: mapRepository)
     mlPositionController = MLPositionLineController(mapRepository: mapRepository)
+    self.displayMultiplePositions = displayMultiplePositions
   }
 
   // maybe just be able to send new useraccuracylevel parameters?
@@ -120,6 +122,7 @@ public class WorldMapController: IMapController {
     shelfController.onStyleUpdated()
     mlPositionController.onStyleUpdated()
 
+    mapView.location.overrideLocationProvider(with: locationController)
     mapView.location.locationProvider.startUpdatingLocation()
     mapView.location.locationProvider.startUpdatingHeading()
     mapView.location.options.activityType = .other
@@ -170,7 +173,17 @@ public class WorldMapController: IMapController {
 
   private func setupUserMarker() {
     guard styleLoaded else { return }
-    mapView.location.options.puckType = .puck2D(Puck2DConfiguration(showsAccuracyRing: true))
+    if displayMultiplePositions {
+      mapView.location.options.puckType = .puck2D(Puck2DConfiguration(showsAccuracyRing: true, accuracyRingBorderColor: .white))
+    } else {
+      switch currentReliableSource {
+      case .gps, .undefined:
+        mapView.location.options.puckType = .puck2D(Puck2DConfiguration(showsAccuracyRing: true, accuracyRingBorderColor: .white))
+      case .vpsML:
+        guard let image = UIImage(named: "userMarker-shadow", in: .module, compatibleWith: nil) else { return }
+        mapView.location.options.puckType = .puck2D(Puck2DConfiguration(topImage: image, shadowImage: image, showsAccuracyRing: true, accuracyRingColor: .orange.withAlphaComponent(0.6), accuracyRingBorderColor: .white))
+      }
+    }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
       self.mapViewContainer.dismissLoadingScreen()
     }
@@ -216,6 +229,43 @@ public class WorldMapController: IMapController {
     guard styleLoaded else { return }
     mlPositionController.onNewPosition(coordinate: coordinate)
   }
+  
+  var currentReliableSource: VPSOutputSignal.LatLngPosition.Source = .undefined {
+    didSet {
+      setupUserMarker()
+    }
+  }
+  public func updateLatLngPosition(latLng: VSFoundation.VPSOutputSignal.LatLngPosition) {
+    DispatchQueue.main.async { [self] in
+      guard styleLoaded else { return }
+      lastLocationPublisher2.send(.init(latitude: latLng.gpsLocation.latitude, longitude: latLng.gpsLocation.longitude))
+      if displayMultiplePositions {
+        switch latLng.reliableSource {
+        case .gps:
+          mlPositionController.hideMLPath()
+          mlPositionController.hideMLUser()
+        case .vpsML:
+          mlPositionController.onNewPosition(location: latLng.mlLocation)
+          mlPositionController.showMLPath()
+          mlPositionController.showMLUser()
+        case .undefined: break
+        }
+        locationController.updateUserLocation(location: latLng.gpsLocation)
+      } else {
+        if currentReliableSource != latLng.reliableSource {
+          currentReliableSource = latLng.reliableSource
+        }
+        locationController.updateUserLocation(latLng: latLng)
+        if latLng.reliableSource == .vpsML {
+          mlPositionController.onNewPosition(location: latLng.mlLocation)
+        }
+      }
+    }
+  }
+
+  public func update(location: VPSOutputSignal.LatLngPosition.Location) {
+    locationController.updateUserLocation(location: location)
+  }
 
   public func updateParticlePositions(positions: [CGPoint]) {}
 
@@ -229,9 +279,11 @@ public class WorldMapController: IMapController {
 
   public func reset() {
     mlPositionController.reset()
+    currentReliableSource = .undefined
   }
 
   public var lastLocationPublisher: CurrentValueSubject<Location?, Never> = .init(nil)
+  public var lastLocationPublisher2: CurrentValueSubject<CLLocation?, Never> = .init(nil)
   public var currentGPSCoordinate: CLLocationCoordinate2D? { lastLocationPublisher.value?.coordinate }
   public var lastMLCoordinate: CLLocationCoordinate2D? { mlPositionController.currentPath.last }
   public var distanceBetweenGPSML: Double? {

@@ -145,7 +145,7 @@ public class BaseMapController: IMapController {
         locationController.updateUserLocation(newLocation: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0), std: 0.0)
 
         mapDataLoadedPublisher.send(true)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [self] in mapViewContainer.dismissLoadingScreen() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.mapViewContainer.dismissLoadingScreen() }
     }
 
     @objc func handleTap(gesture: UITapGestureRecognizer) {
@@ -238,6 +238,10 @@ public class BaseMapController: IMapController {
       guard styleLoaded else { return }
       mlPositionController.onNewPosition(coordinate: coordinate)
     }
+
+    public func updateLatLngPosition(latLng: VSFoundation.VPSOutputSignal.LatLngPosition) {}
+
+    public func update(location: VPSOutputSignal.LatLngPosition.Location) {}
 
     public func updateParticlePositions(positions: [CGPoint]) {
       guard styleLoaded else { return }
