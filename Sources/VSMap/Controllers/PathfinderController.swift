@@ -261,13 +261,17 @@ class PathfinderController {
       }).store(in: &cancellable)
 
     pathfinder?.pathUpdatedPublisher
-      .compactMap { $0 }
+      //.compactMap { $0 }
       .sink(receiveValue: { [weak self] (path) in
-        guard let converter = self?.converter else { return }
-        let modified = path.convertFromPixelToMapCoordinate(converter: converter)
-        self?.currentHeadPath = modified.head
-        self?.currentBodyPath = modified.body
-        self?.currentTailPath = modified.tail
+        guard let self = self else { return }
+        guard let modified = path?.convertFromPixelToMapCoordinate(converter: converter) else { return }
+        let shouldUpdateBody = currentBodyPath != modified.body
+        currentHeadPath = modified.head
+        currentBodyPath = modified.body
+        currentTailPath = modified.tail
+        if shouldUpdateBody {
+          refreshLines()
+        }
       }).store(in: &cancellable)
 
 //    pathfinder?.hasGoal
@@ -353,6 +357,7 @@ extension PathfinderController: IPathfinderController {
   }
 
   func remove(id: String, completion: @escaping (() -> Void)) {
+    allGoals.removeValue(forKey: id)
     pathfinder?.remove(id: id, completion: {
       self.refreshLines()
       completion()
@@ -360,6 +365,7 @@ extension PathfinderController: IPathfinderController {
   }
 
   func remove(ids: [String], completion: @escaping () -> Void) {
+    ids.forEach { allGoals.removeValue(forKey: $0) }
     pathfinder?.remove(ids: ids, completion: {
       self.refreshLines()
       completion()
@@ -375,6 +381,7 @@ extension PathfinderController: IPathfinderController {
   }
 
   func removeAll(completion: @escaping () -> Void) {
+    allGoals.removeAll()
     pathfinder?.set(goals: [], completion: {
       self.refreshLines()
       completion()

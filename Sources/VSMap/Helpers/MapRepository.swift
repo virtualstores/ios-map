@@ -54,7 +54,9 @@ public class MapRepository {
         
         set { _map = newValue }
     }
-    
+
+    var displayMultiplePositions: Bool = false
+
     var floorLevelId: Int64 { mapData.rtlsOptions.id }
     
     var swapLocations: [Int64: [SwapLocation]] {

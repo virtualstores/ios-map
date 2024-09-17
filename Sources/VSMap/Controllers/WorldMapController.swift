@@ -47,10 +47,10 @@ public class WorldMapController: IMapController {
 
   private let mapRepository: MapRepository = MapRepository()
   private let mapViewContainer: TT2MapView
-  private let displayMultiplePositions: Bool
 
   private var mapData: MapData { mapRepository.mapData }
   private var mapView: MapView { mapViewContainer.mapView }
+  private var displayMultiplePositions: Bool { mapRepository.displayMultiplePositions }
 
   private var styleLoaded: Bool = false
 
@@ -59,12 +59,12 @@ public class WorldMapController: IMapController {
     self.mapViewContainer.setup(with: token)
 
     mapRepository.mapOptions = mapOptions
+    mapRepository.displayMultiplePositions = displayMultiplePositions
     markerController = MarkerController(mapRepository: mapRepository)
     pathfinderController = PathfinderController(mapRepository: mapRepository)
     zoneController = ZoneController(mapRepository: mapRepository)
     shelfController = ShelfController(mapRepository: mapRepository)
     mlPositionController = MLPositionLineController(mapRepository: mapRepository)
-    self.displayMultiplePositions = displayMultiplePositions
   }
 
   // maybe just be able to send new useraccuracylevel parameters?
@@ -235,17 +235,18 @@ public class WorldMapController: IMapController {
       setupUserMarker()
     }
   }
-  public func updateLatLngPosition(latLng: VSFoundation.VPSOutputSignal.LatLngPosition) {
-    DispatchQueue.main.async { [self] in
-      guard styleLoaded else { return }
+  public func updateLatLngPosition(latLng: VPSOutputSignal.LatLngPosition) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self, styleLoaded else { return }
       lastLocationPublisher2.send(.init(latitude: latLng.gpsLocation.latitude, longitude: latLng.gpsLocation.longitude))
+      mlPositionController.onNewPosition(latLng: latLng)
       if displayMultiplePositions {
         switch latLng.reliableSource {
         case .gps:
           mlPositionController.hideMLPath()
           mlPositionController.hideMLUser()
         case .vpsML:
-          mlPositionController.onNewPosition(location: latLng.mlLocation)
+          //mlPositionController.onNewPosition(location: latLng.mlLocation)
           mlPositionController.showMLPath()
           mlPositionController.showMLUser()
         case .undefined: break
@@ -257,7 +258,7 @@ public class WorldMapController: IMapController {
         }
         locationController.updateUserLocation(latLng: latLng)
         if latLng.reliableSource == .vpsML {
-          mlPositionController.onNewPosition(location: latLng.mlLocation)
+          //mlPositionController.onNewPosition(location: latLng.mlLocation)
         }
       }
     }
@@ -285,7 +286,7 @@ public class WorldMapController: IMapController {
   public var lastLocationPublisher: CurrentValueSubject<Location?, Never> = .init(nil)
   public var lastLocationPublisher2: CurrentValueSubject<CLLocation?, Never> = .init(nil)
   public var currentGPSCoordinate: CLLocationCoordinate2D? { lastLocationPublisher.value?.coordinate }
-  public var lastMLCoordinate: CLLocationCoordinate2D? { mlPositionController.currentPath.last }
+  public var lastMLCoordinate: CLLocationCoordinate2D? { mlPositionController.currentMLPath.last }
   public var distanceBetweenGPSML: Double? {
     guard
       let gpsCoordinate = currentGPSCoordinate,

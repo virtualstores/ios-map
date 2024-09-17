@@ -15,38 +15,53 @@ class MLPositionLineController {
   let LAYER_ID = "ml-position"
   let QUEUE_SOURCE_ID = "queue-ml-position-source"
   let QUEUE_LAYER_ID = "queue-ml-position"
+  let GPS_SOURCE_ID = "gps-position-source"
+  let GPS_LAYER_ID = "gps-position"
   let CIRCLE_SOURCE_ID = "particle-circle-source"
   let CIRCLE_LAYER_ID = "particle-circle"
   let ML_USER_SOURCE_ID = "ml-position-circle-source"
   let ML_USER_LAYER_ID = "ml-position-circle"
 
   private var mapRepository: MapRepository
-  private(set) var currentPath: [CLLocationCoordinate2D] = []
-  private(set) var currentPathQueue: Queue<CLLocationCoordinate2D> = .init(timeout: 30_000)
+  private(set) var currentMLPath: [CLLocationCoordinate2D] = []
+  private(set) var currentMLPathQueue: Queue<CLLocationCoordinate2D> = .init(timeout: 30_000)
+  private(set) var currentGPSPath: [CLLocationCoordinate2D] = []
   private(set) var particleCoordinates = [CLLocationCoordinate2D]()
-  private var currentMLPosition: CLLocationCoordinate2D? { currentPath.last }
+  private var currentMLPosition: CLLocationCoordinate2D? { currentMLPath.last }
 
-  private var _lineSource: GeoJSONSource?
-  private var lineSource: GeoJSONSource {
-    guard let lineSource = _lineSource else { fatalError("ERROOOOOOOOOR!") }
+  private var _mlLineSource: GeoJSONSource?
+  private var mlLineSource: GeoJSONSource {
+    guard let lineSource = _mlLineSource else { fatalError("ERROOOOOOOOOR!") }
     return lineSource
   }
 
-  private var _lineLayer: CircleLayer?
-  private var lineLayer: CircleLayer {
-    guard let lineLayer = _lineLayer else { fatalError("ERROOOOOOR") }
+  private var _mlLineLayer: CircleLayer?
+  private var mlLineLayer: CircleLayer {
+    guard let lineLayer = _mlLineLayer else { fatalError("ERROOOOOOR") }
     return lineLayer
   }
 
-  private var _lineSourceQueue: GeoJSONSource?
-  private var lineSourceQueue: GeoJSONSource {
-    guard let lineSource = _lineSourceQueue else { fatalError("ERROOOOOOOOOR!") }
+  private var _mlLineSourceQueue: GeoJSONSource?
+  private var mlLineSourceQueue: GeoJSONSource {
+    guard let lineSource = _mlLineSourceQueue else { fatalError("ERROOOOOOOOOR!") }
     return lineSource
   }
 
-  private var _lineLayerQueue: CircleLayer?
-  private var lineLayerQueue: CircleLayer {
-    guard let lineLayer = _lineLayerQueue else { fatalError("ERROOOOOOR") }
+  private var _mlLineLayerQueue: CircleLayer?
+  private var mlLineLayerQueue: CircleLayer {
+    guard let lineLayer = _mlLineLayerQueue else { fatalError("ERROOOOOOR") }
+    return lineLayer
+  }
+
+  private var _gpsLineSource: GeoJSONSource?
+  private var gpsLineSource: GeoJSONSource {
+    guard let lineSource = _gpsLineSource else { fatalError("ERROOOOOOOOOR!") }
+    return lineSource
+  }
+
+  private var _gpsLineLayer: CircleLayer?
+  private var gpsLineLayer: CircleLayer {
+    guard let lineLayer = _gpsLineLayer else { fatalError("ERROOOOOOR") }
     return lineLayer
   }
 
@@ -89,16 +104,16 @@ class MLPositionLineController {
 
 private extension MLPositionLineController {
   func initSources() {
-    _lineSource = GeoJSONSource()
-    _lineSource?.data = .empty
+    _mlLineSource = GeoJSONSource()
+    _mlLineSource?.data = .empty
 
-    _lineLayer = CircleLayer(id: LAYER_ID)
-    _lineLayer?.source = SOURCE_ID
-    //_lineLayer?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
-    //_lineLayer?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
-    _lineLayer?.circleColor = .constant(StyleColor(.orange))
-    _lineLayer?.visibility = .constant(.visible)
-    _lineLayer?.circleRadius = .expression(
+    _mlLineLayer = CircleLayer(id: LAYER_ID)
+    _mlLineLayer?.source = SOURCE_ID
+    //_mlLineLayer?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
+    //_mlLineLayer?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
+    _mlLineLayer?.circleColor = .constant(StyleColor(.orange))
+    _mlLineLayer?.visibility = .constant(.visible)
+    _mlLineLayer?.circleRadius = .expression(
       Exp(.interpolate) {
         Exp(.exponential) { 2 }
         Exp(.zoom)
@@ -110,16 +125,27 @@ private extension MLPositionLineController {
       }
     )
 
-    _lineSourceQueue = GeoJSONSource()
-    _lineSourceQueue?.data = .empty
+    _mlLineSourceQueue = GeoJSONSource()
+    _mlLineSourceQueue?.data = .empty
 
-    _lineLayerQueue = CircleLayer(id: QUEUE_LAYER_ID)
-    _lineLayerQueue?.source = QUEUE_SOURCE_ID
-    //_lineLayer?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
-    //_lineLayer?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
-    _lineLayerQueue?.circleColor = _lineLayer?.circleColor
-    _lineLayerQueue?.visibility = _lineLayer?.visibility
-    _lineLayerQueue?.circleRadius = _lineLayer?.circleRadius
+    _mlLineLayerQueue = CircleLayer(id: QUEUE_LAYER_ID)
+    _mlLineLayerQueue?.source = QUEUE_SOURCE_ID
+    //_mlLineLayerQueue?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
+    //_mlLineLayerQueue?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
+    _mlLineLayerQueue?.circleColor = _mlLineLayer?.circleColor
+    _mlLineLayerQueue?.visibility = _mlLineLayer?.visibility
+    _mlLineLayerQueue?.circleRadius = _mlLineLayer?.circleRadius
+
+    _gpsLineSource = GeoJSONSource()
+    _gpsLineSource?.data = .empty
+
+    _gpsLineLayer = CircleLayer(id: GPS_LAYER_ID)
+    _gpsLineLayer?.source = GPS_SOURCE_ID
+    //_gpsLineLayer?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
+    //_gpsLineLayer?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
+    _gpsLineLayer?.circleColor = .constant(StyleColor(.blue))
+    _gpsLineLayer?.visibility = _mlLineLayer?.visibility
+    _gpsLineLayer?.circleRadius = _mlLineLayer?.circleRadius
 
     _circleSource = GeoJSONSource()
     _circleSource?.data = .empty
@@ -172,8 +198,9 @@ private extension MLPositionLineController {
     //currentPath = testPath
     DispatchQueue.main.async { [self] in
       //try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.lineString(LineString(currentPath))))
-      try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentPath))))
-      try? style.updateGeoJSONSource(withId: QUEUE_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentPathQueue.asArray()))))
+      try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPath))))
+      try? style.updateGeoJSONSource(withId: QUEUE_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPathQueue.asArray()))))
+      try? style.updateGeoJSONSource(withId: GPS_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentGPSPath))))
       if let coordinate = currentMLPosition {
         try? style.updateGeoJSONSource(withId: ML_USER_SOURCE_ID, geoJSON: .geometry(.point(.init(coordinate))))
       } else {
@@ -197,14 +224,33 @@ internal extension MLPositionLineController {
     //  print("Distance", largestDistance, distance)
     //}
     //if position.distance(to: lastPosition) >= 2 { reset() }
-    currentPath.append(coordinate)
+    currentMLPath.append(coordinate)
     //lastPosition = position
     refreshML()
   }
 
   func onNewPosition(location: VPSOutputSignal.LatLngPosition.Location) {
-    currentPath.append(location.coordinate)
-    currentPathQueue.enqueue(location.coordinate)
+    currentMLPath.append(location.coordinate)
+    currentMLPathQueue.enqueue(location.coordinate)
+    refreshML()
+  }
+
+  func onNewPosition(latLng: VPSOutputSignal.LatLngPosition) {
+    if mapRepository.displayMultiplePositions {
+      currentGPSPath.append(latLng.gpsLocation.coordinate)
+      currentMLPath.append(latLng.mlLocation.coordinate)
+      currentMLPathQueue.enqueue(latLng.mlLocation.coordinate)
+    } else {
+      switch latLng.reliableSource {
+      case .gps:
+        currentGPSPath.append(latLng.gpsLocation.coordinate)
+      case .undefined:
+        break
+      case .vpsML:
+        currentMLPath.append(latLng.mlLocation.coordinate)
+        currentMLPathQueue.enqueue(latLng.mlLocation.coordinate)
+      }
+    }
     refreshML()
   }
 
@@ -214,7 +260,9 @@ internal extension MLPositionLineController {
   }
 
   func reset() {
-    currentPath.removeAll()
+    currentMLPath.removeAll()
+    currentMLPathQueue.clear()
+    currentGPSPath.removeAll()
     particleCoordinates.removeAll()
     refreshML()
     refreshCircle()
@@ -223,17 +271,17 @@ internal extension MLPositionLineController {
   func onStyleUpdated() {
     initSources()
 
-    try? style.addSource(lineSource, id: SOURCE_ID)
-    try? style.addLayer(lineLayer, layerPosition: LayerPosition.below("marker-layer"))
-    try? style.addSource(lineSourceQueue, id: QUEUE_SOURCE_ID)
-    try? style.addLayer(lineLayerQueue, layerPosition: LayerPosition.below("marker-layer"))
+    try? style.addSource(mlLineSource, id: SOURCE_ID)
+    try? style.addLayer(mlLineLayer, layerPosition: LayerPosition.below("marker-layer"))
+    try? style.addSource(mlLineSourceQueue, id: QUEUE_SOURCE_ID)
+    try? style.addLayer(mlLineLayerQueue, layerPosition: LayerPosition.below("marker-layer"))
+    try? style.addSource(gpsLineSource, id: GPS_SOURCE_ID)
+    try? style.addLayer(gpsLineLayer, layerPosition: LayerPosition.below("marker-layer"))
     try? style.addSource(circleSource, id: CIRCLE_SOURCE_ID)
     try? style.addLayer(circleLayer, layerPosition: LayerPosition.below("marker-layer"))
     try? style.addSource(mlCircleSource, id: ML_USER_SOURCE_ID)
     try? style.addLayer(mlCircleLayer, layerPosition: LayerPosition.below("marker-layer"))
     hide()
-    //showMLUser()
-    //refreshML()
   }
 }
 
@@ -241,6 +289,7 @@ extension MLPositionLineController: IMLPositionLineController {
   public func show() {
     showMLPath()
     showFullMLPath()
+    showFullGPSPath()
     showParticles()
     showMLUser()
   }
@@ -248,16 +297,21 @@ extension MLPositionLineController: IMLPositionLineController {
   public func hide() {
     hideMLPath()
     hideFullMLPath()
+    hideFullGPSPath()
     hideParticles()
     hideMLUser()
   }
 
   public func showMLPath() {
-    try? style.updateLayer(withId: QUEUE_LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    try? style.updateLayer(withId: QUEUE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   public func showFullMLPath() {
-    try? style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    try? style.updateLayer(withId: LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+  }
+
+  public func showFullGPSPath() {
+    try? style.updateLayer(withId: GPS_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   public func showParticles() {
@@ -271,11 +325,15 @@ extension MLPositionLineController: IMLPositionLineController {
   }
 
   public func hideMLPath() {
-    try? style.updateLayer(withId: QUEUE_LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.none) }
+    try? style.updateLayer(withId: QUEUE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   public func hideFullMLPath() {
-    try? style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.none) }
+    try? style.updateLayer(withId: LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
+  }
+
+  public func hideFullGPSPath() {
+    try? style.updateLayer(withId: GPS_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   public func hideParticles() {
