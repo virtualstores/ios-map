@@ -72,6 +72,8 @@ class CameraController: ICameraController {
             let squareMeters = rtls.boundingBoxInMeters?.squareMeters ?? rtls.squareMeters
             self.actualCameraMode = FollowUser3D(mapView: mapView, zoomLevel: zoomLevel ?? FollowUser3DOptions().getZoomLevelForArea(mapSquareMeters: squareMeters))
             //mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: 8, bearing: .heading, pitch: 25)))
+        //case .containPoint(let point):
+        //  self.actualCameraMode = ContainPoint(mapView: mapView, focusCoordinate: point.fromPixelToLatLng(converter: mapRepository.mapData.converter))
         }
     }
     
@@ -111,6 +113,7 @@ class CameraController: ICameraController {
         let cameraPadding = converter.convertFromMetersToMapCoordinate(input: 2)
         let cameraBounds: CoordinateBounds
         var bearing: Double = 0.0
+        //var bearing: Double = 90.0
         if let boundingBox = rtls.boundingBoxInMeters {
             bearing = rtls.id == 76 ? 90 : 0
             var padding = bearing != 0 ? boundingBox.padding.multiply(with: 10) : boundingBox.padding
@@ -134,7 +137,7 @@ class CameraController: ICameraController {
         let bounds: CoordinateBounds?
         switch mode {
         case .containMap, .free: bounds = defaultCamera?.bounds
-        case .followUser3D(_): bounds = CoordinateBounds(southwest: CLLocationCoordinate2D(latitude: -90, longitude: -180), northeast: CLLocationCoordinate2D(latitude: 90, longitude: 180))
+        case .followUser3D(_)/*, .containPoint(_)*/: bounds = CoordinateBounds(southwest: CLLocationCoordinate2D(latitude: -90, longitude: -180), northeast: CLLocationCoordinate2D(latitude: 90, longitude: 180))
         }
         try? mapView.mapboxMap.setCameraBounds(with: createCameraBoundsOptions(bounds: bounds))
     }

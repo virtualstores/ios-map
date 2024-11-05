@@ -167,3 +167,34 @@ struct FollowUser3DOptions {
     let zoomLevel: Double
   }
 }
+
+class ContainPoint: CameraMode {
+  let mapView: MapView
+  let focusCoordinate: CLLocationCoordinate2D
+  var camera: CameraController?
+  var rtlsOptions: RtlsOptions?
+  var lastLocation: CLLocationCoordinate2D?
+
+  init(mapView: MapView, focusCoordinate: CLLocationCoordinate2D) {
+    self.mapView = mapView
+    self.focusCoordinate = focusCoordinate
+  }
+
+  func onEnter() {
+    showUserAndPoint()
+  }
+
+  func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double) {
+    lastLocation = newLocation
+    showUserAndPoint()
+  }
+
+  private func showUserAndPoint() {
+    guard let lastLocation = lastLocation else { return }
+    let options = mapView.mapboxMap.camera(for: .multiPoint(.init([lastLocation, focusCoordinate])), padding: .init(top: 0.0, left: 0.0, bottom: 0.0, right: 4.0), bearing: 90, pitch: 0)
+    //let options = mapView.mapboxMap.camera(for: .init(coordinates: [lastLocation, focusCoordinate]), padding: .zero, bearing: 90, pitch: 0)
+    DispatchQueue.main.async {
+      self.mapView.camera.ease(to: options, duration: 1)
+    }
+  }
+}

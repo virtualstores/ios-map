@@ -272,8 +272,11 @@ public class WorldMapController: IMapController {
 
   var direction: Double = .zero
   public func updateUserDirection(newDirection: Double) {
-    direction = newDirection
-    locationController.updateUserDirection(newDirection: newDirection)
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      direction = newDirection
+      locationController.updateUserDirection(newDirection: newDirection)
+    }
   }
 
   public func stop() {}
