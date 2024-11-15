@@ -125,7 +125,17 @@ class MarkerController: IMarkerController {
         _markerLayer?.iconAnchor = .constant(IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom)
         _markerLayer?.iconOffset = .constant([mapMarkOptions.offsetX, mapMarkOptions.offsetY]) // use marker offset
         
-        _markerLayer?.iconSize = .constant(mapMarkOptions.scaleSize)  //options.mapMark.scaleSize
+        //_markerLayer?.iconSize = .constant(mapMarkOptions.scaleSize)  //options.mapMark.scaleSize
+        _markerLayer?.iconSize = .expression(
+          Exp(.interpolate) {
+            Exp(.exponential) { 2 }
+            Exp(.zoom)
+            [
+              0.0: 0.0,
+              22.0: mapMarkOptions.scaleSize * 20_000
+            ]
+          }
+        )
         _markerLayer?.iconAllowOverlap = .constant(true)
         _markerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
         _markerLayer?.visibility = .constant(.visible)
@@ -138,7 +148,17 @@ class MarkerController: IMarkerController {
         _focusedMarkerLayer?.iconAnchor = .constant(IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom)
         _focusedMarkerLayer?.iconOffset = .constant([mapMarkOptions.offsetX, mapMarkOptions.offsetY]) // use marker offset
 
-        _focusedMarkerLayer?.iconSize = .constant(mapMarkOptions.focusScaleSize)  //options.mapMark.scaleSize
+        //_focusedMarkerLayer?.iconSize = .constant(mapMarkOptions.focusScaleSize)  //options.mapMark.scaleSize
+        _focusedMarkerLayer?.iconSize = .expression(
+          Exp(.interpolate) {
+            Exp(.exponential) { 2 }
+            Exp(.zoom)
+            [
+              0.0: 0.0,
+              22.0: mapMarkOptions.focusScaleSize * 20_000
+            ]
+          }
+        )
         _focusedMarkerLayer?.iconAllowOverlap = .constant(true)
         _focusedMarkerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
         _focusedMarkerLayer?.visibility = .constant(.visible)
@@ -192,14 +212,19 @@ class MarkerController: IMarkerController {
         switch result {
         case .success(let features):
           features.forEach { feature in
-            if feature.source == self.SOURCE_ID {
-              guard
-                let id = feature.feature.properties?[self.PROP_ID]??.rawValue as? String,
-                let marker = self.markers[id]
-              else { return }
-
-              self.onMarkerClicked.send(marker)
+            guard
+              feature.source == self.SOURCE_ID,
+              let id = feature.feature.properties?[self.PROP_ID]??.rawValue as? String,
+              let marker = self.markers[id]
+            else {
+              let id = feature.feature.properties?[self.PROP_ID]??.rawValue as? String
+              print("Marker not found", id)
+              if let id = id {
+                print("Marker", id, self.markers[id]?.id)
+              }
+              return
             }
+            self.onMarkerClicked.send(marker)
           }
         case .failure(let error): print("QueryError", error.localizedDescription)
         }
