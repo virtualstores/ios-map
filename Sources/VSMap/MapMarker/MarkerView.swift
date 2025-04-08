@@ -12,4 +12,5 @@ import VSFoundation
 final class MarkerView: UIView {
   @IBOutlet weak var label: UILabel!
   @IBOutlet var imageView: UIImageView!
+  @IBOutlet var backgroundImageView: UIImageView!
 }

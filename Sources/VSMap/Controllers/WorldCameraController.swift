@@ -22,7 +22,7 @@ public class WorldCameraController: ICameraController {
   public var cameraState: CameraState { mapView.cameraState }
 
   private var mapView: MapView
-  private var mapRepository: MapRepository
+  @Inject var mapRepository: MapRepository
   private var rtlsOptions: RtlsOptions?
   private var lastLocation: Location?
   private var revertCameraModeTimer: Timer?
@@ -37,8 +37,8 @@ public class WorldCameraController: ICameraController {
     createCameraMode()
   }
 
-  public func updateLocation(with newLocation: CLLocationCoordinate2D, direction: Double) {
-    actualCameraMode?.onLocationUpdated(newLocation: newLocation, direction: direction)
+  public func updateLocation(with newLocation: CLLocationCoordinate2D, direction: Double, std: Double) {
+    actualCameraMode?.onLocationUpdated(newLocation: newLocation, direction: direction, std: std)
   }
 
   public func updateCameraMode(with mode: CameraModes) {

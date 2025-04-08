@@ -13,7 +13,9 @@ import MapboxMaps
 import Combine
 
 public class WorldMapController: IMapController {
+  public var id: String { UUID().uuidString.uppercased() }
   public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
+  public var mapStatePublisher: CurrentValueSubject<MapState?, Never> = .init(nil)
 
   public var location: ILocation {
     guard let location = internalLocation else { fatalError("Location not loaded") }
@@ -45,7 +47,8 @@ public class WorldMapController: IMapController {
   private var internalLocation: LocationController?
   private var cameraController: WorldCameraController?
 
-  private let mapRepository: MapRepository = MapRepository()
+  //private let mapRepository: MapRepository = MapRepository()
+  @Inject var mapRepository: MapRepository
   private let mapViewContainer: TT2MapView
 
   private var mapData: MapData { mapRepository.mapData }
@@ -58,13 +61,13 @@ public class WorldMapController: IMapController {
     self.mapViewContainer = view
     self.mapViewContainer.setup(with: token)
 
+    markerController = MarkerController()
+    pathfinderController = PathfinderController()
+    zoneController = ZoneController()
+    shelfController = ShelfController()
+    mlPositionController = MLPositionLineController()
     mapRepository.mapOptions = mapOptions
     mapRepository.displayMultiplePositions = displayMultiplePositions
-    markerController = MarkerController(mapRepository: mapRepository)
-    pathfinderController = PathfinderController(mapRepository: mapRepository)
-    zoneController = ZoneController(mapRepository: mapRepository)
-    shelfController = ShelfController(mapRepository: mapRepository)
-    mlPositionController = MLPositionLineController(mapRepository: mapRepository)
   }
 
   // maybe just be able to send new useraccuracylevel parameters?
@@ -103,7 +106,7 @@ public class WorldMapController: IMapController {
     }
   }
 
-  public func start() {
+  public func start(isReferenceAngleCertain: Bool) {
     if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { mapViewContainer.addLoadingView() }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
         self.setupUserMarker()
@@ -111,7 +114,7 @@ public class WorldMapController: IMapController {
   }
 
   private func onStyleLoaded(style: Style) {
-    internalLocation = LocationController(mapRepository: mapRepository)
+    internalLocation = LocationController()
 
     mapRepository.style = style
 
@@ -143,7 +146,7 @@ public class WorldMapController: IMapController {
 
     mapDataLoadedPublisher.send(true)
 
-    start()
+    start(isReferenceAngleCertain: false)
   }
 
   @objc func handleTap(gesture: UITapGestureRecognizer) {
@@ -201,17 +204,25 @@ public class WorldMapController: IMapController {
     }
   }
 
+  public func set(userMarkerVisibility: Bool) {
+    if userMarkerVisibility, mapView.location.options.puckType == .none || mapView.location.options.puckType == nil {
+      setupUserMarker()
+    } else {
+      mapView.location.options.puckType = .none
+    }
+  }
+
   var date = Date()
-  public func updateUserLocation(newLocation: CGPoint?, std: Double?) {
-    guard let position = newLocation, let std = std, styleLoaded else { return }
+  public func updateUserLocation(position: VPSOutputSignal.Position) {
+    guard styleLoaded else { return }
     if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { setupUserMarker() }
 
-    let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
-    locationController.updateUserLocation(newLocation: mapPosition, std: std)
-    cameraController?.updateLocation(with: mapPosition, direction: direction)
-    markerController.updateLocation(newLocation: position, precision: std)
-    pathfinderController.onNewPosition(position: position)
-    zoneController.updateLocation(newLocation: position)
+    let mapPosition = position.point.convertFromMeterToLatLng(converter: mapData.converter)
+    locationController.updateUserLocation(newLocation: mapPosition, std: position.std)
+    cameraController?.updateLocation(with: mapPosition, direction: direction, std: position.std)
+    markerController.updateLocation(newLocation: position.point, precision: position.std)
+    pathfinderController.onNewPosition(position: position.point, std: 1.5)
+    zoneController.updateLocation(newLocation: position.point)
   }
 
   private var realConverter: ICoordinateConverterReal?
@@ -297,6 +308,8 @@ public class WorldMapController: IMapController {
     else { return nil }
     return gpsCoordinate.distance(to: mlCoordinate)
   }
+
+  public func visitScore(_ score: Int) {}
 }
 
 extension WorldMapController: LocationConsumer {

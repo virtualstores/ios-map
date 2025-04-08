@@ -10,6 +10,7 @@ import VSFoundation
 import Combine
 import CoreGraphics
 import MapboxMaps
+import Turf
 
 class PathfinderController {
   let SOURCE_ID_HEAD = "pathfinding-source-head"
@@ -24,10 +25,11 @@ class PathfinderController {
 
   private let PROP_VISIBLE = "mark_visible"
 
-  private var mapRepository: MapRepository
+  @Inject var mapRepository: MapRepository
   private var cancellable = Set<AnyCancellable>()
 
   private var _onCurrentGoalChangePublisher: CurrentValueSubject<PathfindingGoal?, Never> = .init(nil)
+  private var _onGoalsUpdatedPublisher: CurrentValueSubject<[PathfindingGoal]?, Never> = .init(nil)
   private var _onSortedGoalChangePublisher: CurrentValueSubject<[PathfindingGoal], Never> = .init([])
 
   private var allGoals: [String : PathfindingGoal] = [:]
@@ -95,10 +97,6 @@ class PathfinderController {
   var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
   var floorLevelId: Int64 { mapRepository.floorLevelId }
   var latestRefreshLines: Date = Date()
-
-  init(mapRepository: MapRepository) {
-    self.mapRepository = mapRepository
-  }
 
   func onFloorChange(mapRepository: MapRepository) {
     self.mapRepository = mapRepository
@@ -191,7 +189,7 @@ class PathfinderController {
     )
   }
 
-  func onNewPosition(position: CGPoint) {
+  func onNewPosition(position: CGPoint, std: Double) {
     updateLocation(newLocation: position)
     guard
       !allGoals.isEmpty,
@@ -199,13 +197,16 @@ class PathfinderController {
       currentPosition != position
     else { return }
     currentPosition = position
+    self.std = max(1.5, min(5.0, std * 1.645))
     refreshLines(body: false, tail: false)
   }
 
   var currentPosition: CGPoint?
+  var std: Double = 1.5
   var currentCoordinate: CLLocationCoordinate2D? { currentPosition?.convertFromMeterToLatLng(converter: converter) }
   private func refreshLines(head: Bool = true, body: Bool = true, tail: Bool = true) {
-    DispatchQueue.main.async { [self] in
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
       guard !allGoals.isEmpty else {
         try? style.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
         try? style.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
@@ -216,7 +217,10 @@ class PathfinderController {
 
       latestRefreshLines = Date()
       if head {
-        let path = slice(path: currentHeadPath, coordinate: currentCoordinate) ?? currentHeadPath
+        var path = slice(path: currentHeadPath, coordinate: currentCoordinate) ?? currentHeadPath
+        if path.count > 4 {
+          path.removeLast(4)
+        }
         //if let distance = distance(in: path) {
         //  print("DISTANCE", currentCoordinate?.fromLatLngToMeter(converter: converter).distance(to: path.last!.fromLatLngToMeter(converter: converter)), distance)
         //}
@@ -240,6 +244,33 @@ class PathfinderController {
     LineString(path).sliced(from: coordinate)?.coordinates
   }
 
+  func slice2(path: [CLLocationCoordinate2D], coordinate: CLLocationCoordinate2D?) -> [CLLocationCoordinate2D]? {
+    var slicedPath = LineString(path).sliced(from: coordinate)?.coordinates
+
+    guard slicedPath?.count ?? 0 > 4 else { return slicedPath }
+    slicedPath = slicedPath?.dropFirst(2).map({ $0 })
+    guard
+      let slicedPath = slicedPath,
+      let meterCoordinate = coordinate?.fromLatLngToMeter(converter: converter)
+    else { return slicedPath }
+    let meterPath = slicedPath.map({ $0.fromLatLngToMeter(converter: converter) })
+    let meterScaleUserPositionRadius = CGFloat(std)
+
+    let angle = atan2(
+      (meterPath[0].y - meterCoordinate.y),
+      (meterPath[0].x - meterCoordinate.x)
+    )
+
+    let meterScalePointOnCircle = CGPoint(
+      x: meterScaleUserPositionRadius * cos(angle) + meterCoordinate.x,
+      y: meterScaleUserPositionRadius * sin(angle) + meterCoordinate.y
+    )
+
+    let latLngPointOnCircle = meterScalePointOnCircle.convertFromMeterToLatLng(converter: converter)
+
+    return LineString(slicedPath).sliced(from: latLngPointOnCircle)?.coordinates
+  }
+
   func distance(in path: [CLLocationCoordinate2D]) -> Double {
     guard path.count > 1 else { return 0 }
     var distance: Double = 0.0
@@ -257,6 +288,12 @@ class PathfinderController {
         self?._onCurrentGoalChangePublisher.send(goal.asGoal)
       }).store(in: &cancellable)
 
+    pathfinder?.goalsUpdatedPublisher
+      .compactMap { $0 }
+      .sink(receiveValue: { [weak self] (goals) in
+        self?._onGoalsUpdatedPublisher.send(goals.map { $0.asGoal })
+      }).store(in: &cancellable)
+
     pathfinder?.sortedGoalUpdatedPublisher
       .compactMap { $0 }
       .sink(receiveValue: { [weak self] (goals) in
@@ -268,11 +305,11 @@ class PathfinderController {
       .sink(receiveValue: { [weak self] (path) in
         guard let self = self else { return }
         guard let modified = path?.convertFromPixelToMapCoordinate(converter: converter) else { return }
-        let shouldUpdateBody = currentBodyPath != modified.body
+        let shouldUpdate = currentHeadPath != modified.head || currentBodyPath != modified.body
         currentHeadPath = modified.head
         currentBodyPath = modified.body
         currentTailPath = modified.tail
-        if shouldUpdateBody {
+        if shouldUpdate {
           refreshLines()
         }
       }).store(in: &cancellable)
@@ -287,6 +324,8 @@ class PathfinderController {
     initSources()
 
     try? style.addSource(lineSourceHead, id: SOURCE_ID_HEAD)
+    try? style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("text-layer copy"))
+    try? style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("text-layer"))
     try? style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("marker-layer"))
 
     try? style.addSource(lineSourceBody, id: SOURCE_ID_BODY)
@@ -312,6 +351,7 @@ extension PathfinderController: IPathfinderController {
   var state: State { .hidden }
 
   var onCurrentGoalChangePublisher: CurrentValueSubject<PathfindingGoal?, Never> { _onCurrentGoalChangePublisher }
+  var onGoalsUpdatedPublisher: CurrentValueSubject<[PathfindingGoal]?, Never> { _onGoalsUpdatedPublisher }
   var onSortedGoalChangePublisher: CurrentValueSubject<[PathfindingGoal], Never> { _onSortedGoalChangePublisher }
   
   var currentGoal: PathfindingGoal? { onCurrentGoalChangePublisher.value }
