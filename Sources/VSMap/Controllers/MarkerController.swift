@@ -6,6 +6,7 @@
 // Copyright (c) 2022 Virtual Stores
 
 import Foundation
+
 import VSFoundation
 import CoreGraphics
 import MapboxMaps
@@ -38,7 +39,8 @@ class MarkerController: IMarkerController {
     private let PROP_TRANSPARENCY = "marker_transparency"
     private let PROP_OFFSET_X = "marker_offset_x"
     private let PROP_OFFSET_Y = "marker_offset_y"
-    
+    private let PROP_ANCHOR = "marker_anchor"
+
     private let ARRAY_SEPARATOR = ":"
     
     let ID_START = "start"
@@ -51,8 +53,7 @@ class MarkerController: IMarkerController {
     var allMarkers: [MapMark] { markers.values.map { $0 } }
     var onMarkerClicked: CurrentValueSubject<MapMark?, Never> = .init(nil)
 
-    private var mapRepository: MapRepository
-    
+    @Inject var mapRepository: MapRepository
     private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
     private var mapMarkOptions: VSFoundation.MapOptions.MapMark { mapOptions.mapMark }
     private var floorLevelId: Int64 { mapRepository.floorLevelId }
@@ -81,12 +82,7 @@ class MarkerController: IMarkerController {
     
     private var focusedMarkerLayer: SymbolLayer {
         guard let focusedMarkerLayer = _focusedMarkerLayer else { fatalError("selectedMarkerLayer is not initialized") }
-        
         return focusedMarkerLayer
-    }
-    
-    public init(mapRepository: MapRepository) {
-        self.mapRepository = mapRepository
     }
 
     func onFloorChange(mapRepository: MapRepository) {
@@ -123,20 +119,21 @@ class MarkerController: IMarkerController {
         
         _markerLayer?.iconImage = .expression(Exp(.get) { PROP_ICON })
         _markerLayer?.iconAnchor = .constant(IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom)
+        //_markerLayer?.iconAnchor = .constant(.top)
         _markerLayer?.iconOffset = .constant([mapMarkOptions.offsetX, mapMarkOptions.offsetY]) // use marker offset
         
-        //_markerLayer?.iconSize = .constant(mapMarkOptions.scaleSize)  //options.mapMark.scaleSize
-        _markerLayer?.iconSize = .expression(
-          Exp(.interpolate) {
-            Exp(.exponential) { 2 }
-            Exp(.zoom)
-            [
-              0.0: 0.0,
-              22.0: mapMarkOptions.scaleSize * 20_000
-            ]
-          }
-        )
-        _markerLayer?.iconAllowOverlap = .constant(true)
+        _markerLayer?.iconSize = .constant(mapMarkOptions.scaleSize)  //options.mapMark.scaleSize
+        //_markerLayer?.iconSize = .expression(
+        //  Exp(.interpolate) {
+        //    Exp(.exponential) { 2 }
+        //    Exp(.zoom)
+        //    [
+        //      0.0: 0.0,
+        //      22.0: mapMarkOptions.scaleSize * 20_000
+        //    ]
+        //  }
+        //)
+        _markerLayer?.iconAllowOverlap = .constant(false)
         _markerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
         _markerLayer?.visibility = .constant(.visible)
         _markerLayer?.filter = Exp(.eq) { Exp(.get) { PROP_FOCUSED }; false }
@@ -144,25 +141,30 @@ class MarkerController: IMarkerController {
         _focusedMarkerLayer = SymbolLayer(id: FOCUSED_LAYER_ID)
         _focusedMarkerLayer?.source = SOURCE_ID
 
-        _focusedMarkerLayer?.iconImage = .expression(Exp(.get){ PROP_ICON })
-        _focusedMarkerLayer?.iconAnchor = .constant(IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom)
+        _focusedMarkerLayer?.iconImage = .expression(Exp(.get) { PROP_ICON })
+        //_focusedMarkerLayer?.iconAnchor = .constant(IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom)
+        _focusedMarkerLayer?.iconAnchor = .expression(Exp(.get) { PROP_ANCHOR })
         _focusedMarkerLayer?.iconOffset = .constant([mapMarkOptions.offsetX, mapMarkOptions.offsetY]) // use marker offset
+        //_focusedMarkerLayer?.iconRotationAlignment = .constant(.map)
+        //_focusedMarkerLayer?.iconPitchAlignment = .constant(.viewport)
 
-        //_focusedMarkerLayer?.iconSize = .constant(mapMarkOptions.focusScaleSize)  //options.mapMark.scaleSize
-        _focusedMarkerLayer?.iconSize = .expression(
-          Exp(.interpolate) {
-            Exp(.exponential) { 2 }
-            Exp(.zoom)
-            [
-              0.0: 0.0,
-              22.0: mapMarkOptions.focusScaleSize * 20_000
-            ]
-          }
-        )
+        _focusedMarkerLayer?.iconSize = .constant(mapMarkOptions.focusScaleSize)
+        //_focusedMarkerLayer?.iconSize = .expression(
+        //  Exp(.interpolate) {
+        //    Exp(.exponential) { 2 }
+        //    Exp(.zoom)
+        //    [
+        //      0.0: 0.0,
+        //      22.0: mapMarkOptions.focusScaleSize * 30_000
+        //    ]
+        //  }
+        //)
         _focusedMarkerLayer?.iconAllowOverlap = .constant(true)
         _focusedMarkerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
         _focusedMarkerLayer?.visibility = .constant(.visible)
         _focusedMarkerLayer?.filter = Exp(.eq) { Exp(.get) { PROP_FOCUSED }; true }
+
+        createStartLocationMarkers()
     }
     
     private func addMapMark() {
@@ -176,7 +178,9 @@ class MarkerController: IMarkerController {
     }
     
     private func refreshMarkers() {
-        let filteredMarkers = markerFeatures.filter { ($0.value.properties?.first(where: { $0.key == self.PROP_VISIBLE })?.value?.rawValue as? Bool ?? false) == true }
+        let filteredMarkers = markerFeatures
+          .merging(startLocationFeatures, uniquingKeysWith: { (current, _) in current })
+          .filter { ($0.value.properties?.first(where: { $0.key == PROP_VISIBLE })?.value?.rawValue as? Bool ?? false) == true }
         let markers = filteredMarkers.map({ $0.value })
 
         //var unclusterableMarkers = markerFeatures.filter({ $0.key != PROP_CLUSTERABLE } )
@@ -187,25 +191,60 @@ class MarkerController: IMarkerController {
     }
     
     private func create(marker: MapMark, completion: @escaping (Result<Feature, Error>) -> Void) {
-        marker.createViewHolder { holder in
+        marker.createViewHolder { [weak self] (holder) in
+            guard let self = self else { return }
             try? self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
             let mapPosition = marker.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
             var feature = Feature(geometry: .point(Point(mapPosition)))
 
             feature.identifier = .string(marker.id)
             feature.properties = JSONObject()
-            feature.properties?[self.PROP_ICON] = .string(holder.imageId)
-            feature.properties?[self.PROP_ID] = .string(holder.id)
-            feature.properties?[self.PROP_FOCUSED] = .boolean(marker.focused)
-            feature.properties?[self.PROP_CLUSTERABLE] = .boolean(marker.clusterable)
-            feature.properties?[self.PROP_OFFSET_X] = .number(marker.offset.dx)
-            feature.properties?[self.PROP_OFFSET_Y] = .number(marker.offset.dy)
+            feature.properties?[PROP_ICON] = .string(holder.imageId)
+            feature.properties?[PROP_ID] = .string(holder.id)
+            feature.properties?[PROP_FOCUSED] = .boolean(marker.focused)
+            feature.properties?[PROP_CLUSTERABLE] = .boolean(marker.clusterable)
+            feature.properties?[PROP_OFFSET_X] = .number(marker.offset.dx)
+            feature.properties?[PROP_OFFSET_Y] = .number(marker.offset.dy)
+            feature.properties?[PROP_ANCHOR] = .string(holder.anchorPoint ?? (IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom).rawValue)
 
-            feature.properties?[self.PROP_VISIBLE] = .boolean(self.floorLevelId == marker.floorLevelId ?? self.floorLevelId)
+            feature.properties?[PROP_VISIBLE] = .boolean(floorLevelId == marker.floorLevelId ?? floorLevelId)
 
             completion(.success(feature))
         }
     }
+
+  func createStartLocationMarkers() {
+    guard let image = UIImage(systemName: "qrcode.viewfinder")?.withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
+    startLocationFeatures.removeAll()
+    mapRepository.mapData.rtlsOptions.scanLocations?
+      .sorted(by: { $0.code < $1.code })
+      .map({
+        let marker = BaseMapMark(
+          id: "TT2" + $0.code,
+          itemPosition: ItemPosition(point: $0.point, offset: .zero, floorLevelId: mapRepository.floorLevelId),
+          data: $0,
+          clusterable: false,
+          defaultVisibility: true,
+          focused: false,
+          type: .image(image)
+        )
+        marker.scale = mapOptions.startMapMark.scale
+        marker.alpha = mapOptions.startMapMark.alhpa
+        marker.backgroundColor = mapOptions.startMapMark.color
+        return marker
+      })
+      .forEach({ (mapMark) in
+        create(marker: mapMark) { [weak self] (result) in
+          guard let self = self else { return }
+          switch result {
+          case .success(var feature):
+            feature.properties?[PROP_VISIBLE] = .boolean(isStartLocationsVisible)
+            startLocationFeatures[mapMark.id] = feature
+          case .failure(_): break
+          }
+        }
+      })
+  }
 
     func onClick(point: CGPoint) {
       mapRepository.map.queryRenderedFeatures(with: point) { (result) in

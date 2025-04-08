@@ -15,23 +15,25 @@ import VSFoundation
 protocol CameraMode {
     var camera: CameraController? { get }
     var rtlsOptions: RtlsOptions? { get }
-    
+    var id: String { get }
+
     func reset()
     func onEnter()
     func onLocationLost()
-    func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double)
+    func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double, std: Double)
     func calculateMapEdge(centerCoordinate: CLLocationCoordinate2D, padding: Double?) -> CoordinateBounds?
 }
 
 internal extension CameraMode {
+    var id: String { String(describing: type(of: self)) }
     func reset() {}
     
     func onEnter() {}
     
     func onLocationLost() {}
     
-    func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double) { }
-    
+    func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double, std: Double) { }
+
     func calculateMapEdge(centerCoordinate: CLLocationCoordinate2D, padding: Double? = nil) -> CoordinateBounds? {
         guard let rtlsOptions = rtlsOptions else { return nil }
 
@@ -109,7 +111,8 @@ internal class FollowUser3D: CameraMode {
     var camera: CameraController?
     var rtlsOptions: RtlsOptions?
     let zoomLevel: Double
-    var direction: Double = .zero
+    var direction: Double { mapView.location.latestLocation?.headingDirection ?? .zero }
+    var std: Double = 2.0
     var lastLocation: CLLocationCoordinate2D?
 
     init(mapView: MapView, zoomLevel: Double) {
@@ -118,35 +121,63 @@ internal class FollowUser3D: CameraMode {
     }
     
     func onEnter() {
-        self.moveCameraToUser()
+        moveCameraToUser(isEnter: true)
     }
     
     func onLocationUpdated(newLocation: CLLocationCoordinate2D) {
-        self.moveCameraToUser()
+        moveCameraToUser()
     }
     
-    func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double) {
+    func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double, std: Double) {
         self.lastLocation = newLocation
-        self.direction = direction
+        //self.direction = direction
+        self.std = std
         self.moveCameraToUser()
     }
-    
-    private func moveCameraToUser() {
-        guard let lastLocation = lastLocation else { return }
+
+    private var animatingEnter = Date()
+    private func moveCameraToUser(isEnter: Bool = false) {
+        guard
+          let lastLocation = lastLocation ?? mapView.location.latestLocation?.coordinate,
+          lastLocation != CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0)
+        else { return }
         var camera = self.mapView.cameraState
-        
         camera.center = lastLocation
         camera.pitch = 25
         
         camera.bearing = direction < 0 ? 360 + direction : direction
 
-        if camera.zoom != self.zoomLevel {
-            camera.zoom = self.zoomLevel
+        let zoomLevel = getZoomLevel(for: std)
+        if camera.zoom != zoomLevel {
+            camera.zoom = zoomLevel
         }
         
-        DispatchQueue.main.async {
-            self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
+        //DispatchQueue.main.async {
+        //    self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
+        //}
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if isEnter {
+                animatingEnter = Date()
+                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 2.4)
+            } else if Date().timeIntervalSince(animatingEnter) > 3.0 {
+                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
+            } else {
+                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 2.4)
+            }
         }
+    }
+
+    func getZoomLevel(for std: Double) -> Double {
+      let zoomIncrement = 0.3
+      switch std {
+      case ..<5: return zoomLevel - zoomIncrement
+      case 5..<10: return zoomLevel - (zoomIncrement * 2)
+      case 10..<15: return zoomLevel - (zoomIncrement * 3)
+      case 15..<20: return zoomLevel - (zoomIncrement * 4)
+      case 20...: return zoomLevel - (zoomIncrement * 5)
+      default: return zoomLevel
+      }
     }
 }
 

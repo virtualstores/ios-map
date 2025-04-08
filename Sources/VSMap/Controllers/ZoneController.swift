@@ -43,7 +43,7 @@ class ZoneController {
   private let PROP_ZONE_LINE_WIDTH = "prop-zone-line-width"
   private let PROP_ZONE_LINE_WIDTH_SCALED = "prop-zone-line-width-scaled"
 
-  private var mapRepository: MapRepository
+  @Inject var mapRepository: MapRepository
   private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   private var zoneStyle: VSFoundation.MapOptions.ZoneStyle { mapOptions.zoneStyle }
   private var sharedProperties: SharedZoneProperties?
@@ -53,13 +53,10 @@ class ZoneController {
   public var onExitPublisher: CurrentValueSubject<Zone?, Never> = .init(nil)
 
   private var zoneTextFeatures: [String : Feature] = [:]
-//  private var zoneTextMarks = mutableMapOf<String, TT2Feature>()
 
   private var zoneLineFeatures: [String : Feature] = [:]
-//  private var zoneLineMarks = mutableMapOf<String, TT2Feature>()
 
   private var zoneFillFeatures: [String : Feature] = [:]
-//  private var zoneFillMarks = mutableMapOf<String, TT2Feature>()
 
   var converter: ICoordinateConverter { mapRepository.mapData.converter }
   var style: Style { mapRepository.style }
@@ -67,47 +64,37 @@ class ZoneController {
   private var _zoneTextSource: GeoJSONSource?
   private var zoneTextSource: GeoJSONSource {
     guard let zoneTextSource = _zoneTextSource else { fatalError() }
-
     return zoneTextSource
   }
 
   private var _zoneFillSource: GeoJSONSource?
   private var zoneFillSource: GeoJSONSource {
     guard let zoneFillSource = _zoneFillSource else { fatalError() }
-
     return zoneFillSource
   }
 
   private var _zoneLineSource: GeoJSONSource?
   private var zoneLineSource: GeoJSONSource {
     guard let zoneLineSource = _zoneLineSource else { fatalError() }
-
     return zoneLineSource
   }
 
   private var _zoneTextLayer: SymbolLayer?
   private var zoneTextLayer: SymbolLayer {
     guard let zoneTextLayer = _zoneTextLayer else { fatalError() }
-
     return zoneTextLayer
   }
 
   private var _zoneFillLayer: FillLayer?
   private var zoneFillLayer: FillLayer {
     guard let zoneFillLayer = _zoneFillLayer else { fatalError() }
-
     return zoneFillLayer
   }
 
   private var _zoneLineLayer: LineLayer?
   private var zoneLineLayer: LineLayer {
     guard let zoneLineLayer = _zoneLineLayer else { fatalError() }
-
     return zoneLineLayer
-  }
-
-  init(mapRepository: MapRepository) {
-    self.mapRepository = mapRepository
   }
 
   func onFloorChange(mapRepository: MapRepository) {

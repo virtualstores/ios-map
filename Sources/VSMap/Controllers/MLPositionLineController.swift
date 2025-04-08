@@ -22,7 +22,7 @@ class MLPositionLineController {
   let ML_USER_SOURCE_ID = "ml-position-circle-source"
   let ML_USER_LAYER_ID = "ml-position-circle"
 
-  private var mapRepository: MapRepository
+  @Inject var mapRepository: MapRepository
   private(set) var currentMLPath: [CLLocationCoordinate2D] = []
   private(set) var currentMLPathQueue: Queue<CLLocationCoordinate2D> = .init(timeout: 30_000)
   private(set) var currentGPSPath: [CLLocationCoordinate2D] = []
@@ -94,10 +94,6 @@ class MLPositionLineController {
   private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   private var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
   private var lastPosition: CGPoint = .zero
-
-  init(mapRepository: MapRepository) {
-    self.mapRepository = mapRepository
-  }
 
   //var largestDistance: Double = 0
 }

@@ -12,23 +12,24 @@ import MapboxMaps
 import SwiftUI
 
 class CameraController: ICameraController {
-    public var requestedCameraMode: CameraModes?
-    public var actualCameraMode: CameraMode? {
+    var requestedCameraMode: CameraModes?
+    var actualCameraMode: CameraMode? {
         didSet {
             actualCameraMode?.onEnter()
         }
     }
     
     private var mapView: MapView
-    private var mapRepository: MapRepository
+    @Inject var mapRepository: MapRepository
     private var rtlsOptions: RtlsOptions?
     private var lastLocation: Location?
     private var revertCameraModeTimer: Timer?
     private var revertCameraInterval = 4.0
-    
-    public init(mapView: MapView, mapRepository: MapRepository) {
+    private var overrideCameramode: CameraModes?
+    private var getCameraMode: CameraModes? { overrideCameramode ?? requestedCameraMode }
+
+    public init(mapView: MapView) {
         self.mapView = mapView
-        self.mapRepository = mapRepository
         if defaultCamera == nil {
             createCamera()
         }
@@ -42,13 +43,14 @@ class CameraController: ICameraController {
         createCameraMode(for: mode)
     }
     
-    public func updateLocation(with newLocation: CLLocationCoordinate2D, direction: Double) {
-        actualCameraMode?.onLocationUpdated(newLocation: newLocation, direction: direction)
+    public func updateLocation(with newLocation: CLLocationCoordinate2D, direction: Double, std: Double) {
+        actualCameraMode?.onLocationUpdated(newLocation: newLocation, direction: direction, std: std)
     }
     
     public func updateCameraMode(with mode: CameraModes) {
+        guard requestedCameraMode != mode else { return }
         requestedCameraMode = mode
-        createCameraMode(for: mode)
+        createCameraMode(for: overrideCameramode ?? mode)
     }
     
     public func setAutoCameraResetDelay(with milliseconds: Double) {
@@ -59,7 +61,15 @@ class CameraController: ICameraController {
         actualCameraMode?.reset()
         resetCameraToMapMode()
     }
-    
+
+    func set(override mode: CameraModes?) {
+        guard overrideCameramode != mode else { return }
+        overrideCameramode = mode
+        createCameraMode(for: getCameraMode ?? .free)
+        if mode == .followUser3D() { hasFollowedUser = true }
+    }
+
+    private(set) var hasFollowedUser = false
     private func createCameraMode(for mode: CameraModes) {
         setCameraBounds(for: mode)
         switch mode {
@@ -90,7 +100,7 @@ class CameraController: ICameraController {
     }
     
     func resetCameraToMapMode() {
-        if !(actualCameraMode is ContainMapMode), let cameraMode = requestedCameraMode {
+        if !(actualCameraMode is ContainMapMode), let cameraMode = getCameraMode {
             self.createCameraMode(for: cameraMode)
         } else {
             self.resetCameraToMapBounds()
@@ -149,13 +159,17 @@ class CameraController: ICameraController {
 
     private func revertCameraModeAfter(interval: Double) {
         self.revertCameraModeTimer?.invalidate()
-        self.revertCameraModeTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false, block: { (_) in
-            guard let mode = self.requestedCameraMode else { return }
-            
-            self.createCameraMode(for: mode)
-            self.revertCameraModeTimer?.invalidate()
-            self.revertCameraModeTimer = nil
+        self.revertCameraModeTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false, block: { [weak self] (_) in
+            guard let self = self, let mode = getCameraMode else { return }
+
+            createCameraMode(for: mode)
+            revertCameraModeTimer?.invalidate()
+            revertCameraModeTimer = nil
         })
+    }
+
+    func reset() {
+      hasFollowedUser = false
     }
 }
 

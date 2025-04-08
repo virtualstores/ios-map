@@ -29,7 +29,7 @@ class ShelfController: IShelfController {
   private var shelvesMarkedFeatures = [String : Feature]()
   var onShelfClicked: CurrentValueSubject<Shelf?, Never> = .init(nil)
 
-  private var mapRepository: MapRepository
+  @Inject var mapRepository: MapRepository
 
   private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   private var shelfOptions: VSFoundation.MapOptions.ShelfStyle { mapOptions.shelfStyle }
@@ -40,40 +40,31 @@ class ShelfController: IShelfController {
   private var _shelvesSource: GeoJSONSource? = nil
   private var shelvesSource: GeoJSONSource {
     guard let shelvesSource = _shelvesSource else { fatalError("shelvesSource is not initialized") }
-
     return shelvesSource
   }
 
   private var _shelvesFillLayer: FillExtrusionLayer?
   private var shelvesFillLayer: FillExtrusionLayer {
     guard let shelvesFillLayer = _shelvesFillLayer else { fatalError("shelvesFillLayer is not initialized") }
-
     return shelvesFillLayer
   }
 
   private var _markedShelvesSource: GeoJSONSource? = nil
   private var markedShelvesSource: GeoJSONSource {
     guard let markedShelvesSource = _markedShelvesSource else { fatalError("markedShelvesSource is not initalized") }
-
     return markedShelvesSource
   }
 
   private var _shelvesLineLayer: LineLayer?
   private var shelvesLineLayer: LineLayer {
     guard let shelvesLineLayer = _shelvesLineLayer else { fatalError("shelvesLineLayer is not initialized") }
-
     return shelvesLineLayer
   }
 
   private var _markedShelvesFillLayer: CircleLayer?
   private var markedShelvesFillLayer: CircleLayer {
     guard let markedShelvesFillLayer = _markedShelvesFillLayer else { fatalError("markedShelvesFillLayer is not initialized") }
-
     return markedShelvesFillLayer
-  }
-
-  init(mapRepository: MapRepository) {
-    self.mapRepository = mapRepository
   }
 
   func onFloorChange(mapRepository: MapRepository) {

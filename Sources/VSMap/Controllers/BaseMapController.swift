@@ -12,24 +12,15 @@ import VSFoundation
 import MapboxMaps
 import Combine
 
-public class BaseMapController: IMapController {
+public class BaseMapController {
   public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
+  public var mapStatePublisher: CurrentValueSubject<MapState?, Never> { stateMachine.mapStatePublisher }
+  public var id: String = UUID().uuidString.uppercased()
 
   public var location: ILocation {
     guard let location = internalLocation else { fatalError("Location not loaded") }
     return location
   }
-
-  public var camera: ICameraController {
-    guard let camera = cameraController else { fatalError("Camera not loaded") }
-    return camera
-  }
-
-  public var marker: IMarkerController { markerController }
-  public var path: IPathfinderController { pathfinderController }
-  public var zone: IZoneController { zoneController }
-  public var shelf: IShelfController { shelfController }
-  public var mlPosition: IMLPositionLineController { mlPositionController }
 
   private var locationController: LocationController {
     guard let location = internalLocation else { fatalError("Location not loaded") }
@@ -45,7 +36,8 @@ public class BaseMapController: IMapController {
   private var internalLocation: LocationController?
   private var cameraController: CameraController?
 
-  private let mapRepository: MapRepository = MapRepository()
+  @Inject var mapRepository: MapRepository
+  @Inject var stateMachine: IMapStateMachine
   private let mapViewContainer: TT2MapView
 
   private var mapData: MapData { mapRepository.mapData }
@@ -53,16 +45,17 @@ public class BaseMapController: IMapController {
 
   private var styleLoaded: Bool = false
 
-  public init(with token: String, view: TT2MapView, mapOptions: VSFoundation.MapOptions) {
+  public init(with token: String, view: TT2MapView, mapOptions: VSFoundation.MapOptions = .init(), stateOptions: StateOptions = .init()) {
     self.mapViewContainer = view
     self.mapViewContainer.setup(with: token)
 
+    markerController = MarkerController()
+    pathfinderController = PathfinderController()
+    zoneController = ZoneController()
+    shelfController = ShelfController()
+    mlPositionController = MLPositionLineController()
     mapRepository.mapOptions = mapOptions
-    markerController = MarkerController(mapRepository: mapRepository)
-    pathfinderController = PathfinderController(mapRepository: mapRepository)
-    zoneController = ZoneController(mapRepository: mapRepository)
-    shelfController = ShelfController(mapRepository: mapRepository)
-    mlPositionController = MLPositionLineController(mapRepository: mapRepository)
+    mapRepository.stateOptions = stateOptions
   }
 
   // maybe just be able to send new useraccuracylevel parameters?
@@ -107,15 +100,19 @@ public class BaseMapController: IMapController {
     CLLocationCoordinate2D()
   }
 
-  public func start() {
+  public func start(isReferenceAngleCertain: Bool) {
     if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { mapViewContainer.addLoadingView() }
     //DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
     //    self.setupUserMarker()
     //}
+    mapRepository.isReferenceAngleCertain = isReferenceAngleCertain
+    if mapRepository.stateOptions.preset == .singleItemWayfinding, isReferenceAngleCertain {
+      stateMachine.onQRCodeStart(mapController: self)
+    }
   }
 
   private func onStyleLoaded(style: Style) {
-    internalLocation = LocationController(mapRepository: mapRepository)
+    internalLocation = LocationController()
 
     mapRepository.style = style
 
@@ -135,16 +132,22 @@ public class BaseMapController: IMapController {
     mapView.ornaments.compassView.isHidden = true
     mapView.ornaments.scaleBarView.isHidden = true
     mapView.ornaments.attributionButton.isHidden = true
-    mapView.ornaments.logoView.isHidden = true
+    //mapView.ornaments.logoView.isHidden = true
 
     let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(gesture:)))
     mapView.addGestureRecognizer(tapGesture)
 
     styleLoaded = true
     locationController.setOptions(options: mapView.location.options)
-    locationController.updateUserLocation(newLocation: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0), std: 0.0)
+    let coordinate = mapRepository.currentPosition?.point.convertFromMeterToLatLng(converter: mapRepository.mapData.converter) ?? CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0)
+    locationController.updateUserLocation(newLocation: coordinate, std: 0.0)
 
     mapDataLoadedPublisher.send(true)
+    switch mapRepository.stateOptions.preset {
+    case .none: break
+    case .singleItemWayfinding:
+      stateMachine.set(mapController: self, options: mapRepository.stateOptions)
+    }
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.mapViewContainer.dismissLoadingScreen() }
   }
 
@@ -176,7 +179,13 @@ public class BaseMapController: IMapController {
       config = Puck2DConfiguration(topImage: image, shadowImage: shadow, scale: scale, showsAccuracyRing: true, accuracyRingColor: accuracyRingColor)
     case .accuracy:
       guard let shadow = image2 else { return }
-      config = Puck2DConfiguration(topImage: shadow, shadowImage: shadow, scale: scale, showsAccuracyRing: true, accuracyRingColor: accuracyRingColor, accuracyRingBorderColor: .white)
+      //config = Puck2DConfiguration(topImage: shadow, shadowImage: shadow, scale: scale, showsAccuracyRing: true, accuracyRingColor: accuracyRingColor, accuracyRingBorderColor: .white)
+
+      var test = Puck2DConfiguration.makeDefault()
+      test.showsAccuracyRing = true
+      test.accuracyRingColor = accuracyRingColor
+      test.accuracyRingBorderColor = .white
+      config = test
     case .custom(let image):
       config = Puck2DConfiguration(topImage: image, scale: scale, showsAccuracyRing: true, accuracyRingColor: accuracyRingColor)
     }
@@ -189,7 +198,7 @@ public class BaseMapController: IMapController {
 
   private func setupCamera(with mode: CameraModes) {
     guard cameraController == nil else { return }
-    cameraController = CameraController(mapView: mapView, mapRepository: mapRepository)
+    cameraController = CameraController(mapView: mapView)
 
     if let controller = cameraController {
       controller.resetCameraToMapBounds()
@@ -200,17 +209,46 @@ public class BaseMapController: IMapController {
   }
 
   var date = Date()
-  public func updateUserLocation(newLocation: CGPoint?, std: Double?) {
+  public func updateUserLocation(position: VPSOutputSignal.Position) {
     DispatchQueue.main.async { [weak self] in
-      guard let self = self, let position = newLocation, let std = std, styleLoaded else { return }
-      if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { setupUserMarker() }
+      guard let self = self, styleLoaded else { return }
 
-      let mapPosition = position.convertFromMeterToLatLng(converter: mapData.converter)
-      locationController.updateUserLocation(newLocation: mapPosition, std: std)
-      cameraController?.updateLocation(with: mapPosition, direction: direction)
-      markerController.updateLocation(newLocation: position, precision: std)
-      pathfinderController.onNewPosition(position: position)
-      zoneController.updateLocation(newLocation: position)
+      let mapPosition = position.point.convertFromMeterToLatLng(converter: mapData.converter)
+      locationController.updateUserLocation(newLocation: mapPosition, std: position.std)
+      cameraController?.updateLocation(with: mapPosition, direction: direction, std: position.std)
+      markerController.updateLocation(newLocation: position.point, precision: position.std)
+      pathfinderController.onNewPosition(position: position.point, std: locationController.accuracyOverride ?? 1.5)
+      zoneController.updateLocation(newLocation: position.point)
+
+      if mapRepository.stateOptions.preset == .none, mapView.location.options.puckType == .none || mapView.location.options.puckType == nil {
+        setupUserMarker()
+      } else {
+        mapViewContainer.dismissLoadingScreen()
+        stateMachine.onPositionUpdate(position: position, mapController: self)
+        if position.trustedPosition, score > 750 {
+          locationController.accuracyOverride = max(2.0, min(4.0, position.std))
+        } else {
+          locationController.accuracyOverride = max(4.0, min(20.0, position.std))
+        }
+      }
+    }
+  }
+
+  var score = 1000
+  public func visitScore(_ score: Int) {
+    self.score = score
+  }
+
+  public func set(userMarkerVisibility: Bool) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      if userMarkerVisibility, mapView.location.options.puckType == .none || mapView.location.options.puckType == nil {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+          self.setupUserMarker()
+        }
+      } else {
+        mapView.location.options.puckType = .none
+      }
     }
   }
 
@@ -247,7 +285,7 @@ public class BaseMapController: IMapController {
   var direction: Double = .zero
   public func updateUserDirection(newDirection: Double) {
     DispatchQueue.main.async { [weak self] in
-      guard let self = self else { return }
+      guard let self = self, styleLoaded else { return }
       direction = newDirection
       locationController.updateUserDirection(newDirection: newDirection)
     }
@@ -255,6 +293,13 @@ public class BaseMapController: IMapController {
 
   public func stop() {
     mapViewContainer.addLoadingView()
+    cameraController?.set(override: nil)
+    cameraController?.reset()
+    mapRepository.currentPosition = nil
+    mapRepository.isPositionActive = false
+    if mapRepository.stateOptions.preset == .singleItemWayfinding {
+      stateMachine.transitionToSate(toState: .locationUnknown, fromState: nil)
+    }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
       self.mapView.location.options.puckType = .none
       self.mapView.location.locationProvider.stopUpdatingLocation()
@@ -269,6 +314,19 @@ public class BaseMapController: IMapController {
   public func reset() {
     mlPositionController.reset()
   }
+}
+
+extension BaseMapController: IMapController {
+  public var camera: ICameraController {
+    guard let camera = cameraController else { fatalError("Camera not loaded") }
+    return camera
+  }
+
+  public var marker: IMarkerController { markerController }
+  public var path: IPathfinderController { pathfinderController }
+  public var zone: IZoneController { zoneController }
+  public var shelf: IShelfController { shelfController }
+  public var mlPosition: IMLPositionLineController { mlPositionController }
 }
 
 extension UIImage {

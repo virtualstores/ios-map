@@ -12,6 +12,7 @@ import MapboxMaps
 public class MapRepository {
     private var _mapData: MapData?
     private var _mapOptions: VSFoundation.MapOptions?
+    private var _stateOptions: StateOptions?
     private var _style: Style?
     private var _map: MapboxMap?
 
@@ -34,7 +35,17 @@ public class MapRepository {
         
         set { _mapOptions = newValue }
     }
-    
+
+    var stateOptions: StateOptions {
+        get {
+            guard let stateOptions = _stateOptions else { fatalError("stateOptions not initialized")}
+
+            return stateOptions
+        }
+
+        set { _stateOptions = newValue }
+    }
+
     var style: Style {
         get {
             guard let style = _style else { fatalError("style not initialized")}
@@ -56,6 +67,9 @@ public class MapRepository {
     }
 
     var displayMultiplePositions: Bool = false
+    var currentPosition: VPSOutputSignal.Position?
+    var isPositionActive = false
+    var isReferenceAngleCertain = false
 
     var floorLevelId: Int64 { mapData.rtlsOptions.id }
     
@@ -71,4 +85,15 @@ public class MapRepository {
             return locations
         }
     }
+
+  func reset() {
+    _mapData = nil
+    _mapOptions = nil
+    _stateOptions = nil
+    _style = nil
+    _map = nil
+    displayMultiplePositions = false
+    currentPosition = nil
+    isPositionActive = false
+  }
 }

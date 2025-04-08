@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="KWj-x3-wnK" customClass="ArrowView" customModule="VSMap">
+            <rect key="frame" x="0.0" y="0.0" width="48" height="58"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <subviews>
+                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="arrowshape.up.fill" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="4ef-wK-m9w">
+                    <rect key="frame" x="0.0" y="-11.666666666666668" width="48" height="69.666666666666686"/>
+                    <color key="tintColor" red="0.0" green="0.67843137254901964" blue="0.90980392156862744" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                </imageView>
+                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="arrowshape.up" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="FY3-bI-YGE">
+                    <rect key="frame" x="0.0" y="-11.666666666666668" width="48" height="69.666666666666686"/>
+                    <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                </imageView>
+            </subviews>
+            <viewLayoutGuide key="safeArea" id="Q4p-OB-e5J"/>
+            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+            <constraints>
+                <constraint firstAttribute="trailing" secondItem="4ef-wK-m9w" secondAttribute="trailing" id="4zb-0h-atJ"/>
+                <constraint firstItem="FY3-bI-YGE" firstAttribute="top" secondItem="4ef-wK-m9w" secondAttribute="top" id="5RU-kv-8g5"/>
+                <constraint firstItem="FY3-bI-YGE" firstAttribute="trailing" secondItem="4ef-wK-m9w" secondAttribute="trailing" id="9I5-tj-xm8"/>
+                <constraint firstAttribute="bottom" secondItem="4ef-wK-m9w" secondAttribute="bottom" id="SIt-zZ-st4"/>
+                <constraint firstItem="FY3-bI-YGE" firstAttribute="bottom" secondItem="4ef-wK-m9w" secondAttribute="bottom" id="YsN-ft-7k3"/>
+                <constraint firstItem="FY3-bI-YGE" firstAttribute="leading" secondItem="4ef-wK-m9w" secondAttribute="leading" id="aiY-vc-p7X"/>
+                <constraint firstItem="4ef-wK-m9w" firstAttribute="leading" secondItem="KWj-x3-wnK" secondAttribute="leading" id="qkZ-Lk-b9F"/>
+                <constraint firstItem="4ef-wK-m9w" firstAttribute="top" secondItem="KWj-x3-wnK" secondAttribute="top" constant="-12" id="x6p-mE-pGe"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="imageView" destination="4ef-wK-m9w" id="blM-iL-cKH"/>
+            </connections>
+            <point key="canvasLocation" x="63.768115942028992" y="131.91964285714286"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="arrowshape.up" catalog="system" width="123" height="128"/>
+        <image name="arrowshape.up.fill" catalog="system" width="123" height="128"/>
+    </resources>
+</document>
