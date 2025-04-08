@@ -42,4 +42,8 @@ extension TT2MapInternal: IMapManager {
   func set(currentLocation position: VSFoundation.VPSOutputSignal.Position?) {
     repository.currentPosition = position
   }
+
+  func set(isReferenceAngleCertain: Bool) {
+    repository.isReferenceAngleCertain = isReferenceAngleCertain
+  }
 }

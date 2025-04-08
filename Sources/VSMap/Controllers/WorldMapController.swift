@@ -106,7 +106,7 @@ public class WorldMapController: IMapController {
     }
   }
 
-  public func start(isReferenceAngleCertain: Bool) {
+  public func start() {
     if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { mapViewContainer.addLoadingView() }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
         self.setupUserMarker()
@@ -146,7 +146,7 @@ public class WorldMapController: IMapController {
 
     mapDataLoadedPublisher.send(true)
 
-    start(isReferenceAngleCertain: false)
+    start()
   }
 
   @objc func handleTap(gesture: UITapGestureRecognizer) {

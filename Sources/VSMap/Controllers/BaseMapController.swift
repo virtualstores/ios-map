@@ -100,13 +100,12 @@ public class BaseMapController {
     CLLocationCoordinate2D()
   }
 
-  public func start(isReferenceAngleCertain: Bool) {
+  public func start() {
     if mapView.location.options.puckType == .none || mapView.location.options.puckType == nil { mapViewContainer.addLoadingView() }
     //DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
     //    self.setupUserMarker()
     //}
-    mapRepository.isReferenceAngleCertain = isReferenceAngleCertain
-    if mapRepository.stateOptions.preset == .singleItemWayfinding, isReferenceAngleCertain {
+    if mapRepository.stateOptions.preset == .singleItemWayfinding, mapRepository.isReferenceAngleCertain {
       stateMachine.onQRCodeStart(mapController: self)
     }
   }
