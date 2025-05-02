@@ -63,7 +63,7 @@ public class BaseMapController {
     mapRepository.mapOptions = mapOptions
   }
 
-  public func setup(pathfinder: IPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
+  public func setup(pathfinder: IPathfinder?, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
     if changedFloor {
       markerController.onFloorChange(mapRepository: mapRepository)
       pathfinderController.onFloorChange(mapRepository: mapRepository)
@@ -77,27 +77,32 @@ public class BaseMapController {
 
   /// Map loader which will receave all needed  setup information
   public func loadMap(with mapData: MapData) {
-    self.mapRepository.mapData = mapData
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      mapRepository.mapData = mapData
 
-    guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
-    styleLoaded = false
-    mapViewContainer.mapStyle = self.mapRepository.mapOptions.mapStyle
-    mapViewContainer.addLoadingView()
-    mapRepository.map = mapView.mapboxMap
-    mapView.mapboxMap.loadStyleURI(styleURI) { [weak self] result in
-      switch result {
-      case .success(let style):
-        self?.onStyleLoaded(style: style)
-      case let .failure(error):
-        Logger(verbosity: .error).log(message: "The map failed to load the style: \(error.localizedDescription)")
-        self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
+      guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
+      styleLoaded = false
+      mapViewContainer.mapStyle = mapRepository.mapOptions.mapStyle
+      mapViewContainer.addLoadingView()
+      mapRepository.map = mapView.mapboxMap
+      mapView.mapboxMap.loadStyleURI(styleURI) { [weak self] result in
+        switch result {
+        case .success(let style):
+          DispatchQueue.main.async {
+            self?.onStyleLoaded(style: style)
+          }
+        case let .failure(error):
+          Logger(verbosity: .error).log(message: "The map failed to load the style: \(error.localizedDescription)")
+          self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
+        }
       }
     }
   }
 
   public var currentGPSCoordinate: CLLocationCoordinate2D?
   public func getCoordinate(point: CGPoint) -> CLLocationCoordinate2D {
-    CLLocationCoordinate2D()
+    CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0)
   }
 
   public func start() {
@@ -326,6 +331,7 @@ extension BaseMapController: IMapController {
   public var zone: IZoneController { zoneController }
   public var shelf: IShelfController { shelfController }
   public var mlPosition: IMLPositionLineController { mlPositionController }
+  public var offlineManager: IMapboxOfflineManager { MapboxOfflineManager() }
 }
 
 extension UIImage {

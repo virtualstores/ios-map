@@ -32,6 +32,7 @@ public class WorldMapController: IMapController {
   public var zone: IZoneController { zoneController }
   public var shelf: IShelfController { shelfController }
   public var mlPosition: IMLPositionLineController { mlPositionController }
+  public var offlineManager: IMapboxOfflineManager { offlineController }
 
   private var locationController: LocationController {
     guard let location = internalLocation else { fatalError("Location not loaded") }
@@ -46,6 +47,7 @@ public class WorldMapController: IMapController {
   private let mlPositionController: MLPositionLineController
   private var internalLocation: LocationController?
   private var cameraController: WorldCameraController?
+  private let offlineController = MapboxOfflineManager()
 
   //private let mapRepository: MapRepository = MapRepository()
   @Inject var mapRepository: MapRepository
@@ -68,6 +70,23 @@ public class WorldMapController: IMapController {
     mlPositionController = MLPositionLineController()
     mapRepository.mapOptions = mapOptions
     mapRepository.displayMultiplePositions = displayMultiplePositions
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(orientationDidChange),
+      name: UIDevice.orientationDidChangeNotification,
+      object: nil
+    )
+  }
+
+
+  var cameraOffset: Double = 0
+  @objc func orientationDidChange(_ notification: Notification) {
+    switch UIDevice.current.orientation {
+    case .portrait: cameraOffset = 0
+    case .landscapeLeft: cameraOffset = 90
+    case .landscapeRight: cameraOffset = -90
+    default: break
+    }
   }
 
   // maybe just be able to send new useraccuracylevel parameters?
@@ -75,7 +94,7 @@ public class WorldMapController: IMapController {
     mapRepository.mapOptions = mapOptions
   }
 
-  public func setup(pathfinder: IPathfinder, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
+  public func setup(pathfinder: IPathfinder?, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
     if changedFloor {
       markerController.onFloorChange(mapRepository: mapRepository)
       pathfinderController.onFloorChange(mapRepository: mapRepository)
@@ -89,19 +108,24 @@ public class WorldMapController: IMapController {
 
   /// Map loader which will receave all needed  setup information
   public func loadMap(with mapData: MapData) {
-    self.mapRepository.mapData = mapData
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      mapRepository.mapData = mapData
 
-    styleLoaded = false
-    mapViewContainer.mapStyle = self.mapRepository.mapOptions.mapStyle
-    mapViewContainer.addLoadingView()
-    mapRepository.map = mapView.mapboxMap
-    mapView.mapboxMap.loadStyleURI(.streets) { [weak self] result in
-      switch result {
-      case .success(let style):
-        self?.onStyleLoaded(style: style)
-      case let .failure(error):
-        Logger(verbosity: .error).log(message: "The map failed to load the style: \(error.localizedDescription)")
-        self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
+      styleLoaded = false
+      mapViewContainer.mapStyle = mapRepository.mapOptions.mapStyle
+      mapViewContainer.addLoadingView()
+      mapRepository.map = mapView.mapboxMap
+      mapView.mapboxMap.loadStyleURI(.satellite) { [weak self] result in
+        switch result {
+        case .success(let style):
+          DispatchQueue.main.async {
+            self?.onStyleLoaded(style: style)
+          }
+        case let .failure(error):
+          Logger(verbosity: .error).log(message: "The map failed to load the style: \(error.localizedDescription)")
+          self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
+        }
       }
     }
   }
@@ -124,6 +148,7 @@ public class WorldMapController: IMapController {
     zoneController.onStyleUpdated()
     shelfController.onStyleUpdated()
     mlPositionController.onStyleUpdated()
+    offlineController.onStyleUpdated()
 
     mapView.location.overrideLocationProvider(with: locationController)
     mapView.location.locationProvider.startUpdatingLocation()
@@ -142,7 +167,7 @@ public class WorldMapController: IMapController {
 
     styleLoaded = true
     locationController.setOptions(options: mapView.location.options)
-    locationController.updateUserLocation(newLocation: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0), std: 0.0)
+    //locationController.updateUserLocation(newLocation: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0), std: 0.0)
 
     mapDataLoadedPublisher.send(true)
 
@@ -276,7 +301,11 @@ public class WorldMapController: IMapController {
   }
 
   public func update(location: VPSOutputSignal.LatLngPosition.Location) {
-    locationController.updateUserLocation(location: location)
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self, styleLoaded else { return }
+      locationController.updateUserLocation(location: location)
+      lastLocationPublisher2.send(.init(latitude: location.latitude, longitude: location.longitude))
+    }
   }
 
   public func updateParticlePositions(positions: [CGPoint]) {}
@@ -284,15 +313,19 @@ public class WorldMapController: IMapController {
   var direction: Double = .zero
   public func updateUserDirection(newDirection: Double) {
     DispatchQueue.main.async { [weak self] in
-      guard let self = self else { return }
-      direction = newDirection
-      locationController.updateUserDirection(newDirection: newDirection)
+      guard let self = self, styleLoaded else { return }
+      direction = newDirection + cameraOffset
+      locationController.updateUserDirection(newDirection: newDirection + cameraOffset)
     }
   }
 
-  public func stop() {}
+  public func stop() {
+    reset()
+    set(userMarkerVisibility: false)
+  }
 
   public func reset() {
+    guard styleLoaded else { return }
     mlPositionController.reset()
     currentReliableSource = .undefined
   }

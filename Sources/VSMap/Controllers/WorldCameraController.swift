@@ -46,19 +46,26 @@ public class WorldCameraController: ICameraController {
     createCameraMode()
   }
 
-  public func setAutoCameraResetDelay(with milliseconds: Double) {
-    revertCameraInterval = milliseconds
+  public func setAutoCameraResetDelay(with seconds: Double) {
+    revertCameraInterval = seconds
   }
 
   public func resetCameraMode() { createCameraMode() }
 
   private func createCameraMode() {
     switch requestedCameraMode {
-    case .free:
+    case .none, .free:
       mapView.viewport.idle()
       mapView.mapboxMap.setCamera(to: CameraOptions(pitch: 0.0))
-    case .none, .containMap, .followUser3D(_):
-      mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: 16, bearing: .heading, pitch: 25)))
+    case .containMap:
+      //Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { (_) in
+      //  print("Center", self.mapView.mapboxMap.cameraState.center)
+      //}
+      let bottomLeft = CLLocationCoordinate2D(latitude: 54.82524199625856, longitude: 7.628706633194951)
+      let topRight = CLLocationCoordinate2D(latitude: 69.24892591976162, longitude: 24.403415771428627)
+      mapView.viewport.transition(to: mapView.viewport.makeOverviewViewportState(options: .init(geometry: MultiPoint([bottomLeft, topRight]))))
+    case .followUser3D(let zoomLevel):
+      mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: zoomLevel ?? 16, bearing: .heading, pitch: 25)))
     }
   }
 
@@ -81,6 +88,7 @@ extension WorldCameraController: LocationConsumer {
 extension WorldCameraController: GestureManagerDelegate {
   public func gestureManager(_ gestureManager: GestureManager, didBegin gestureType: GestureType) {
     self.revertCameraModeTimer?.invalidate()
+    mapView.viewport.idle()
     //Logger(verbosity: .debug).log(message: "didBegin")
   }
 
