@@ -206,6 +206,7 @@ class MapboxOfflineManager {
     try? mapRepository.style.addSource(source, id: SOURCE_ID)
     try? mapRepository.style.addLayer(layer, layerPosition: LayerPosition.below("puck"))
     try? mapRepository.style.addLayer(layer, layerPosition: LayerPosition.default)
+    hide()
   }
 }
 
@@ -227,6 +228,14 @@ extension MapboxOfflineManager: IMapboxOfflineManager {
       completionHandler: completionHandler,
       debugMode: debugMode
     )
+  }
+
+  func show() {
+    try? mapRepository.style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+  }
+
+  func hide() {
+    try? mapRepository.style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 }
 
