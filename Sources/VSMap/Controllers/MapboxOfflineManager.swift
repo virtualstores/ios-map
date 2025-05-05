@@ -65,7 +65,7 @@ class MapboxOfflineManager {
     completionHandler: @escaping(Bool) -> (),
     debugMode: Bool
   ) {
-    let dispatchGroup = DispatchGroup()
+    let group = DispatchGroup()
 
     var downloadError = false
 
@@ -78,7 +78,7 @@ class MapboxOfflineManager {
       metadata: ["stylePack": "stylePackValue"]
     )!
 
-    dispatchGroup.enter()
+    group.enter()
     if debugMode {
       print("Downloading style pack...")
     }
@@ -91,14 +91,13 @@ class MapboxOfflineManager {
         if debugMode {
           print("StylePack = \(progress)")
         }
-        // TODO: Test 0 value division
-        styleProgressHandler(Float(progress.completedResourceCount) / Float(0))
+        styleProgressHandler(Float(progress.completedResourceCount) / Float(progress.requiredResourceCount))
       }
 
     } completion: { (result) in
       DispatchQueue.main.async {
         defer {
-          dispatchGroup.leave()
+          group.leave()
         }
 
         switch result {
@@ -142,14 +141,12 @@ class MapboxOfflineManager {
     // Use the the default TileStore to load this region. You can create
     // custom TileStores are are unique for a particular file path, i.e.
     // there is only ever one TileStore per unique path.
-    //dispatchSemaphore.wait()
-    dispatchGroup.enter()
+    group.enter()
     if debugMode {
       print("Downloading tile region for \(region.regionId)...")
     }
 
-    let tileRegionDownload = tileStore.loadTileRegion(forId: region.regionId,
-                                                      loadOptions: tileRegionLoadOptions) { [weak self] (progress) in
+    let tileRegionDownload = tileStore.loadTileRegion(forId: region.regionId, loadOptions: tileRegionLoadOptions) { (progress) in
       // These closures do not get called from the main thread. In this case
       // we're updating the UI, so it's important to dispatch to the main
       // queue.
@@ -163,7 +160,7 @@ class MapboxOfflineManager {
       DispatchQueue.main.async {
         defer {
 
-          dispatchGroup.leave()
+          group.leave()
         }
 
         switch result {
@@ -182,7 +179,7 @@ class MapboxOfflineManager {
     }
 
     // Wait for both downloads before moving to the next state
-    dispatchGroup.notify(queue: .main) {
+    group.notify(queue: .main) {
       if debugMode {
         print("Download completed for all regions... Error = \(downloadError)")
       }
