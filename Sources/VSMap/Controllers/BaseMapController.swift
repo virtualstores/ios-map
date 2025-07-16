@@ -64,15 +64,18 @@ public class BaseMapController {
   }
 
   public func setup(pathfinder: IPathfinder?, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
-    if changedFloor {
-      markerController.onFloorChange(mapRepository: mapRepository)
-      pathfinderController.onFloorChange(mapRepository: mapRepository)
-      zoneController.onFloorChange(mapRepository: mapRepository)
-      shelfController.onFloorChange(mapRepository: mapRepository)
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      if changedFloor {
+        markerController.onFloorChange(mapRepository: mapRepository)
+        pathfinderController.onFloorChange(mapRepository: mapRepository)
+        zoneController.onFloorChange(mapRepository: mapRepository)
+        shelfController.onFloorChange(mapRepository: mapRepository)
+      }
+      pathfinderController.pathfinder = pathfinder
+      zoneController.setup(zones: zones, sharedProperties: sharedProperties)
+      shelfController.setShelves(shelves: shelves)
     }
-    pathfinderController.pathfinder = pathfinder
-    zoneController.setup(zones: zones, sharedProperties: sharedProperties)
-    shelfController.setShelves(shelves: shelves)
   }
 
   /// Map loader which will receave all needed  setup information

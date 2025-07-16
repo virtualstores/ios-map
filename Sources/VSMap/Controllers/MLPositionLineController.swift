@@ -192,7 +192,8 @@ private extension MLPositionLineController {
 
   func refreshML() {
     //currentPath = testPath
-    DispatchQueue.main.async { [self] in
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
       //try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.lineString(LineString(currentPath))))
       try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPath))))
       try? style.updateGeoJSONSource(withId: QUEUE_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPathQueue.asArray()))))
@@ -206,7 +207,8 @@ private extension MLPositionLineController {
   }
 
   func refreshCircle() {
-    DispatchQueue.main.async { [self] in
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
       try? style.updateGeoJSONSource(withId: CIRCLE_SOURCE_ID, geoJSON: .geometry(.multiPoint(MultiPoint(particleCoordinates))))
     }
   }

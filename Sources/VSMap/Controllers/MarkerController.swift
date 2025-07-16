@@ -67,19 +67,16 @@ class MarkerController: IMarkerController {
     private var _markerSource: GeoJSONSource? = nil
     private var markerSource: GeoJSONSource {
         guard let markerSource = _markerSource else { fatalError("markerSource is not initialized") }
-        
         return markerSource
     }
     
     private var _markerLayer: SymbolLayer? = nil
     private var markerLayer: SymbolLayer {
         guard let markerLayer = _markerLayer else { fatalError("markerLayer is not initialized") }
-        
         return markerLayer
     }
     
     private var _focusedMarkerLayer: SymbolLayer? = nil
-    
     private var focusedMarkerLayer: SymbolLayer {
         guard let focusedMarkerLayer = _focusedMarkerLayer else { fatalError("selectedMarkerLayer is not initialized") }
         return focusedMarkerLayer
@@ -350,9 +347,9 @@ class MarkerController: IMarkerController {
         let distance = markerCoordinate.distance(to: coordinate)
         if distance < TRANSPARENCY_TRIGGER_RADIUS {
             let adjustedCoordinate = CLLocationCoordinate2D(latitude: coordinate.latitude - 0.3, longitude: coordinate.longitude)
-            let transparency = markerCoordinate.distance(to: adjustedCoordinate)
-            let trans = min(max(transparency / (TRANSPARENCY_TRIGGER_RADIUS * 1.5), 0.4), 1.0)
-            markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(trans)
+            let distance = markerCoordinate.distance(to: adjustedCoordinate)
+            let transparency = min(max(distance / (TRANSPARENCY_TRIGGER_RADIUS * 1.5), 0.4), 1.0)
+            markerFeatures[marker.id]?.properties?[PROP_TRANSPARENCY] = .number(transparency)
             update = true
         } else {
             guard let transparency = feature.properties?[PROP_TRANSPARENCY]??.rawValue as? Double, transparency != 1.0, !update else { return update }

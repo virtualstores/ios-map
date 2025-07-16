@@ -39,9 +39,9 @@ class MapboxOfflineManager {
     _layer?.lineWidth = .constant(2)
   }
 
-  var area = [[CLLocationCoordinate2D]]()
+  var area = [[[CLLocationCoordinate2D]]]()
   func refreshLines() {
-    try! mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .feature(.init(geometry: .multiPolygon(.init([area])))))
+    try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .feature(.init(geometry: .multiPolygon(.init(area)))))
   }
 
   private lazy var offlineManager: OfflineManager = {
@@ -184,7 +184,7 @@ class MapboxOfflineManager {
         print("Download completed for all regions... Error = \(downloadError)")
       }
       if !downloadError {
-        self.area = region.coordinates
+        self.area.append(region.coordinates)
         self.refreshLines()
       }
       completionHandler(downloadError)

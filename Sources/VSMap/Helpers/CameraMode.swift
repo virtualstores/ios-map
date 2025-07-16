@@ -152,20 +152,20 @@ internal class FollowUser3D: CameraMode {
             camera.zoom = zoomLevel
         }
         
-        //DispatchQueue.main.async {
-        //    self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
-        //}
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            if isEnter {
-                animatingEnter = Date()
-                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 2.4)
-            } else if Date().timeIntervalSince(animatingEnter) > 3.0 {
-                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
-            } else {
-                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 2.4)
-            }
+        DispatchQueue.main.async {
+            self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
         }
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            if isEnter {
+//                animatingEnter = Date()
+//                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 2.4)
+//            } else if Date().timeIntervalSince(animatingEnter) > 3.0 {
+//                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
+//            } else {
+//                mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 2.4)
+//            }
+//        }
     }
 
     func getZoomLevel(for std: Double) -> Double {
