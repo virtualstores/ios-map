@@ -11,6 +11,7 @@ import MapboxMaps
 import VSFoundation
 
 class MLPositionLineController {
+  let tag = "MLPositionLineController"
   let SOURCE_ID = "ml-position-source"
   let LAYER_ID = "ml-position"
   let QUEUE_SOURCE_ID = "queue-ml-position-source"
@@ -96,6 +97,10 @@ class MLPositionLineController {
   private var lastPosition: CGPoint = .zero
 
   //var largestDistance: Double = 0
+
+  deinit {
+    print("\(tag).deinit")
+  }
 }
 
 private extension MLPositionLineController {

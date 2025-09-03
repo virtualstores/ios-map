@@ -86,7 +86,11 @@ class MarkerController: IMarkerController {
         self.mapRepository = mapRepository
         self.refreshMarkers()
     }
-    
+
+  deinit {
+    print("\(TAG).deinit")
+  }
+
     func initSources() {
         _markerSource = GeoJSONSource()
 //        _markerSource?.cluster = mapOptions.cluster.clusteringEnabled

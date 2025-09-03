@@ -13,6 +13,7 @@ import MapboxMaps
 import Turf
 
 class PathfinderController {
+  let tag = "PathfinderController"
   let SOURCE_ID_HEAD = "pathfinding-source-head"
   let SOURCE_ID_BODY = "pathfinding-source-body"
   let SOURCE_ID_TAIL = "pathfinding-source-tail"
@@ -339,7 +340,9 @@ class PathfinderController {
   }
 
   deinit {
+    print("\(tag).deinit")
     cancellable.removeAll()
+    pathfinder = nil
   }
 
   private func checkIfSwaplocationIsNeeded(goal: PathfindingGoal)  {
@@ -357,23 +360,23 @@ extension PathfinderController: IPathfinderController {
   var currentGoal: PathfindingGoal? { onCurrentGoalChangePublisher.value }
   var sortedGoals: [PathfindingGoal] { onSortedGoalChangePublisher.value }
 
-  func add(goal: PathfindingGoal, completion: @escaping (() -> Void)) {
+  func add(goal: PathfindingGoal, completion: (() -> ())?) {
     allGoals[goal.id] = goal
     filterAndSetGoals(completion: completion)
   }
 
-  func add(goals: [PathfindingGoal], completion: @escaping (() -> Void)) {
+  func add(goals: [PathfindingGoal], completion: (() -> ())?) {
     goals.forEach { allGoals[$0.id] = $0 }
     filterAndSetGoals(completion: completion)
   }
 
-  func set(goals: [PathfindingGoal], completion: @escaping (() -> Void)) {
+  func set(goals: [PathfindingGoal], completion: (() -> ())?) {
     allGoals.removeAll()
     goals.forEach { allGoals[$0.id] = $0 }
     filterAndSetGoals(completion: completion)
   }
 
-  private func filterAndSetGoals(completion: @escaping (() -> Void)) {
+  private func filterAndSetGoals(completion: (() -> ())?) {
     let goals = filterGoals(forFloorLevel: false)
     var filteredGoals = filterGoals()
     goals.forEach { goal in
@@ -386,7 +389,7 @@ extension PathfinderController: IPathfinderController {
 
     pathfinder?.set(goals: filteredGoals.map { $0.asGoal.convertFromMeterToPixel(converter: converter) }) {
       self.refreshLines()
-      completion()
+      completion?()
     }
   }
 
@@ -399,35 +402,35 @@ extension PathfinderController: IPathfinderController {
     }
   }
 
-  func remove(id: String, completion: @escaping (() -> Void)) {
+  func remove(id: String, completion: (() -> ())?) {
     allGoals.removeValue(forKey: id)
     pathfinder?.remove(id: id, completion: {
       self.refreshLines()
-      completion()
+      completion?()
     })
   }
 
-  func remove(ids: [String], completion: @escaping () -> Void) {
+  func remove(ids: [String], completion: (() -> ())?) {
     ids.forEach { allGoals.removeValue(forKey: $0) }
     pathfinder?.remove(ids: ids, completion: {
       self.refreshLines()
-      completion()
+      completion?()
     })
   }
 
-  func remove(goal: PathfindingGoal, completion: @escaping (() -> Void)) {
+  func remove(goal: PathfindingGoal, completion: (() -> ())?) {
     remove(id: goal.id, completion: completion)
   }
 
-  func remove(goals: [PathfindingGoal], completion: @escaping (() -> Void)) {
+  func remove(goals: [PathfindingGoal], completion: (() -> ())?) {
     remove(ids: goals.map({ $0.id }), completion: completion)
   }
 
-  func removeAll(completion: @escaping () -> Void) {
+  func removeAll(completion: (() -> ())?) {
     allGoals.removeAll()
     pathfinder?.set(goals: [], completion: {
       self.refreshLines()
-      completion()
+      completion?()
     })
   }
 
@@ -473,14 +476,14 @@ extension PathfinderController: IPathfinderController {
   }
 
   func hasGoal() -> Bool {
-    pathfinder?.hasGoal.value ?? false
+    pathfinder?.hasGoal ?? false
   }
 
   func updateLocation(newLocation: CGPoint) {
     pathfinder?.setUserPosition(position: newLocation.fromMeterToPixel(converter: converter).flipY(converter: converter))
   }
 
-  func forceRefresh(withTSP: Bool, overridePosition: CGPoint?, completion: @escaping (() -> Void)) {
+  func forceRefresh(withTSP: Bool, overridePosition: CGPoint?, completion: (() -> ())?) {
     pathfinder?.forceRefresh(withTSP: withTSP, overridePosition: overridePosition, completion: completion)
   }
 }

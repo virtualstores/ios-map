@@ -12,6 +12,7 @@ import MapboxMaps
 import Combine
 
 class ShelfController: IShelfController {
+  let tag = "ShelfController"
   private let DEFAULT_STYLE_SHELVES_LAYER = "shelves"
   private let DEFAULT_STYLE_WALLS_LAYER = "walls"
   private let SHELVES_SOURCE = "shelves-source"
@@ -65,6 +66,10 @@ class ShelfController: IShelfController {
   private var markedShelvesFillLayer: CircleLayer {
     guard let markedShelvesFillLayer = _markedShelvesFillLayer else { fatalError("markedShelvesFillLayer is not initialized") }
     return markedShelvesFillLayer
+  }
+
+  deinit {
+    print("\(tag).deinit")
   }
 
   func onFloorChange(mapRepository: MapRepository) {

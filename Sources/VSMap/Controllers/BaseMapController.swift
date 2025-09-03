@@ -13,6 +13,7 @@ import MapboxMaps
 import Combine
 
 public class BaseMapController {
+  let tag = "BaseMapController"
   public var mapDataLoadedPublisher: CurrentValueSubject<Bool, MapControllerError> = .init(false)
   public var mapStatePublisher: CurrentValueSubject<MapState?, Never> { stateMachine.mapStatePublisher }
   public var id: String = UUID().uuidString.uppercased()
@@ -56,6 +57,17 @@ public class BaseMapController {
     mlPositionController = MLPositionLineController()
     mapRepository.mapOptions = mapOptions
     mapRepository.stateOptions = stateOptions
+  }
+
+  deinit {
+    print("\(tag).deinit")
+    if let controller = cameraController {
+      mapView.location.removeLocationConsumer(consumer: controller)
+    }
+  }
+
+  public func dispose() {
+    stateMachine.set(mapController: nil, options: .init())
   }
 
   // maybe just be able to send new useraccuracylevel parameters?

@@ -11,6 +11,7 @@ import VSFoundation
 import Combine
 
 class ZoneController {
+  let tag = "ZoneController"
   private let DEFAULT_STYLE_WALLS_LAYER = "walls"
   private let SOURCE_ZONE_LINE = "zone-line-source"
   private let SOURCE_ZONE_FILL = "zone-fill-source"
@@ -95,6 +96,10 @@ class ZoneController {
   private var zoneLineLayer: LineLayer {
     guard let zoneLineLayer = _zoneLineLayer else { fatalError() }
     return zoneLineLayer
+  }
+
+  deinit {
+    print("\(tag).deinit")
   }
 
   func onFloorChange(mapRepository: MapRepository) {
@@ -289,6 +294,7 @@ class ZoneController {
     try? style.addLayer(zoneFillLayer, layerPosition: .below(LAYER_ZONE_LINE))
 
     refreshZones()
+    hideAllLayers()
   }
 }
 
