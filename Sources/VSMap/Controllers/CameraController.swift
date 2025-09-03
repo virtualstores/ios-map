@@ -12,6 +12,7 @@ import MapboxMaps
 import SwiftUI
 
 class CameraController: ICameraController {
+    let tag = "CameraController"
     var requestedCameraMode: CameraModes?
     var actualCameraMode: CameraMode? {
         didSet {
@@ -36,6 +37,7 @@ class CameraController: ICameraController {
     }
 
     deinit {
+        print("\(tag).deinit")
         defaultCamera = nil
     }
 

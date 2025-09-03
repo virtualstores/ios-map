@@ -11,6 +11,7 @@ import VSFoundation
 import MapboxMaps
 
 class LocationController: ILocation, LocationProvider {
+  let tag = "LocationController"
     // MARK: ILocation properties
     public var userMarkVisibility: UserMarkVisibility
     public var position: CLLocation?
@@ -33,7 +34,11 @@ class LocationController: ILocation, LocationProvider {
         accuracyAuthorization = .fullAccuracy
         headingOrientation = .portrait
     }
-    
+
+    deinit {
+      print("\(tag).deinit")
+    }
+
     // MARK: ILocation implementation
     var accuracyOverride: Double?
     public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Double) {
