@@ -25,10 +25,12 @@ class LocationController: ILocation, LocationProvider {
     
     weak var delegate: LocationProviderDelegate?
 
-    @Inject var mapRepository: MapRepository
-    private var converter: ICoordinateConverter { mapRepository.mapData.converter }
-    
-    public init() {
+    private let converter: ICoordinateConverter
+    private let mapOptions: VSFoundation.MapOptions
+
+    public init(coordinateConverter: ICoordinateConverter, mapOptions: VSFoundation.MapOptions) {
+        self.converter = coordinateConverter
+        self.mapOptions = mapOptions
         userMarkVisibility = .visible
         authorizationStatus = .authorizedAlways
         accuracyAuthorization = .fullAccuracy
@@ -43,7 +45,7 @@ class LocationController: ILocation, LocationProvider {
     var accuracyOverride: Double?
     public func updateUserLocation(newLocation: CLLocationCoordinate2D, std: Double) {
         let accuracy: Double
-        switch mapRepository.mapOptions.userMark.userMarkerType {
+        switch mapOptions.userMark.userMarkerType {
         case .bullsEye, .custom(_): accuracy = max(1.5, std * 1.645)
         case .heading: accuracy = max(5.0, min(7.0, std * 1.645))
         case .accuracy: accuracy = max(1.5, min(5.0, std * 1.645))//1.5

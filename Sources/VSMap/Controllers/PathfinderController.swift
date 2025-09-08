@@ -12,7 +12,7 @@ import CoreGraphics
 import MapboxMaps
 import Turf
 
-class PathfinderController {
+class PathfinderController: Disposable {
   let tag = "PathfinderController"
   let SOURCE_ID_HEAD = "pathfinding-source-head"
   let SOURCE_ID_BODY = "pathfinding-source-body"
@@ -98,6 +98,17 @@ class PathfinderController {
   var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
   var floorLevelId: Int64 { mapRepository.floorLevelId }
   var latestRefreshLines: Date = Date()
+
+  deinit {
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
+    dispose()
+  }
+
+  func dispose() {
+    Logger(verbosity: .info).log(tag: tag, message: "dispose")
+    cancellable.removeAll()
+    pathfinder = nil
+  }
 
   func onFloorChange(mapRepository: MapRepository) {
     self.mapRepository = mapRepository
@@ -337,12 +348,6 @@ class PathfinderController {
 
     try? style.addSource(lineSourceEnd, id: SOURCE_ID_END)
     //try? style.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
-  }
-
-  deinit {
-    print("\(tag).deinit")
-    cancellable.removeAll()
-    pathfinder = nil
   }
 
   private func checkIfSwaplocationIsNeeded(goal: PathfindingGoal)  {

@@ -21,6 +21,7 @@ public class WorldCameraController: ICameraController {
 
   public var cameraState: CameraState { mapView.cameraState }
 
+  private let tag = "WorldCameraController"
   private var mapView: MapView
   @Inject var mapRepository: MapRepository
   private var rtlsOptions: RtlsOptions?
@@ -31,6 +32,17 @@ public class WorldCameraController: ICameraController {
   public init(mapView: MapView, mapRepository: MapRepository) {
     self.mapView = mapView
     self.mapRepository = mapRepository
+  }
+
+  deinit {
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
+    dispose()
+  }
+
+  public func dispose() {
+    // TODO: Do this
+    Logger(verbosity: .info).log(tag: tag, message: "dispose")
+    Logger(verbosity: .warning).log(tag: tag, message: "Implementation missing")
   }
 
   func setInitialCameraMode(for mode: CameraModes) {

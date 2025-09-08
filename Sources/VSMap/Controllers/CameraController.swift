@@ -20,14 +20,14 @@ class CameraController: ICameraController {
         }
     }
     
-    private var mapView: MapView
-    @Inject var mapRepository: MapRepository
-    private var rtlsOptions: RtlsOptions?
+    private var mapView: MapView?
+    @OptionalInject var mapRepository: MapRepository?
     private var lastLocation: Location?
     private var revertCameraModeTimer: Timer?
     private var revertCameraInterval = 4.0
     private var overrideCameramode: CameraModes?
     private var getCameraMode: CameraModes? { overrideCameramode ?? requestedCameraMode }
+    private var defaultCamera: (bounds: CoordinateBounds, bearing: Double)?
 
     public init(mapView: MapView) {
         self.mapView = mapView
@@ -37,8 +37,23 @@ class CameraController: ICameraController {
     }
 
     deinit {
-        print("\(tag).deinit")
-        defaultCamera = nil
+      Logger(verbosity: .info).log(tag: tag, message: "deinit")
+      dispose()
+    }
+
+    func dispose() {
+      Logger(verbosity: .info).log(tag: tag, message: "dispose")
+      mapView = nil
+      mapRepository = nil
+      defaultCamera = nil
+      requestedCameraMode = nil
+      actualCameraMode?.dispose()
+      actualCameraMode = nil
+      lastLocation = nil
+      revertCameraModeTimer?.invalidate()
+      revertCameraModeTimer = nil
+      overrideCameramode = nil
+      defaultCamera = nil
     }
 
     func setInitialCameraMode(for mode: CameraModes) {
@@ -80,7 +95,10 @@ class CameraController: ICameraController {
         case .containMap:
             self.actualCameraMode = ContainMapMode(with: self)
         case .followUser3D(let zoomLevel):
-            let rtls = mapRepository.mapData.rtlsOptions
+            guard
+                let rtls = mapRepository?.mapData.rtlsOptions,
+                let mapView = mapView
+            else { return }
             let squareMeters = rtls.boundingBoxInMeters?.squareMeters ?? rtls.squareMeters
             self.actualCameraMode = FollowUser3D(mapView: mapView, zoomLevel: zoomLevel ?? FollowUser3DOptions().getZoomLevelForArea(mapSquareMeters: squareMeters))
             //mapView.viewport.transition(to: mapView.viewport.makeFollowPuckViewportState(options: FollowPuckViewportStateOptions(zoom: 8, bearing: .heading, pitch: 25)))
@@ -90,7 +108,10 @@ class CameraController: ICameraController {
     }
     
     func resetCameraToMapBounds() {
-        guard let camera = defaultCamera else {
+        guard
+            let camera = defaultCamera,
+            let mapView = mapView
+        else {
             createCamera()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.resetCameraToMapBounds() }
             return
@@ -112,8 +133,8 @@ class CameraController: ICameraController {
         }
     }
 
-    var defaultCamera: (bounds: CoordinateBounds, bearing: Double)?
     func createCamera() {
+        guard let mapRepository = mapRepository else { return }
         let rtls = mapRepository.mapData.rtlsOptions
         let converter = mapRepository.mapData.converter
 
@@ -151,10 +172,12 @@ class CameraController: ICameraController {
         case .containMap, .free: bounds = defaultCamera?.bounds
         case .followUser3D(_)/*, .containPoint(_)*/: bounds = CoordinateBounds(southwest: CLLocationCoordinate2D(latitude: -90, longitude: -180), northeast: CLLocationCoordinate2D(latitude: 90, longitude: 180))
         }
-        try? mapView.mapboxMap.setCameraBounds(with: createCameraBoundsOptions(bounds: bounds))
+        guard let options = createCameraBoundsOptions(bounds: bounds) else { return }
+        try? mapView?.mapboxMap.setCameraBounds(with: options)
     }
 
-    func createCameraBoundsOptions(bounds: CoordinateBounds?) -> CameraBoundsOptions {
+    func createCameraBoundsOptions(bounds: CoordinateBounds?) -> CameraBoundsOptions? {
+        guard let mapRepository = mapRepository else { return nil }
         let options = mapRepository.mapOptions.mapStyle
         return CameraBoundsOptions(bounds: bounds, maxZoom: options.maxZoomLevel, minZoom: options.minZoomLevel)
     }

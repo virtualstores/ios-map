@@ -12,7 +12,7 @@ import MapboxMaps
 import VSFoundation
 
 /// CameraMode protacol which will be used for creating any type of mode
-protocol CameraMode {
+protocol CameraMode: Disposable {
     var camera: CameraController? { get }
     var rtlsOptions: RtlsOptions? { get }
     var id: String { get }
@@ -26,6 +26,8 @@ protocol CameraMode {
 
 internal extension CameraMode {
     var id: String { String(describing: type(of: self)) }
+
+    func dispose() {}
     func reset() {}
     
     func onEnter() {}
@@ -92,11 +94,23 @@ internal class FreeMode: CameraMode {
 internal class ContainMapMode: CameraMode {
     var camera: CameraController?
     var rtlsOptions: RtlsOptions?
-    
+
+    private let tag = "ContainMapMode"
+
     public init(with camera: CameraController) {
         self.camera = camera
     }
-    
+
+    deinit {
+      Logger(verbosity: .info).log(tag: tag, message: "deinit")
+      dispose()
+    }
+
+    func dispose() {
+      Logger(verbosity: .info).log(tag: tag, message: "dispose")
+      camera = nil
+    }
+
     func onEnter() {
         camera?.resetCameraToMapMode()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -107,19 +121,31 @@ internal class ContainMapMode: CameraMode {
 
 // MARK: ThreeDimensionalMode
 internal class FollowUser3D: CameraMode {
-    let mapView: MapView
+    var mapView: MapView?
     var camera: CameraController?
     var rtlsOptions: RtlsOptions?
     let zoomLevel: Double
-    var direction: Double { mapView.location.latestLocation?.headingDirection ?? .zero }
+    var direction: Double { mapView?.location.latestLocation?.headingDirection ?? .zero }
     var std: Double = 2.0
     var lastLocation: CLLocationCoordinate2D?
+
+    private let tag = "FollowUser3D"
 
     init(mapView: MapView, zoomLevel: Double) {
         self.mapView = mapView
         self.zoomLevel = zoomLevel
     }
-    
+
+    deinit {
+      Logger(verbosity: .info).log(tag: tag, message: "deinit")
+      dispose()
+    }
+
+    func dispose() {
+      Logger(verbosity: .info).log(tag: tag, message: "dispose")
+      mapView = nil
+    }
+
     func onEnter() {
         moveCameraToUser(isEnter: true)
     }
@@ -138,10 +164,11 @@ internal class FollowUser3D: CameraMode {
     private var animatingEnter = Date()
     private func moveCameraToUser(isEnter: Bool = false) {
         guard
-          let lastLocation = lastLocation ?? mapView.location.latestLocation?.coordinate,
-          lastLocation != CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0)
+          let lastLocation = lastLocation ?? mapView?.location.latestLocation?.coordinate,
+          lastLocation != CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0),
+          var camera = self.mapView?.cameraState
         else { return }
-        var camera = self.mapView.cameraState
+
         camera.center = lastLocation
         camera.pitch = 25
         
@@ -153,7 +180,7 @@ internal class FollowUser3D: CameraMode {
         }
         
         DispatchQueue.main.async {
-            self.mapView.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
+            self.mapView?.camera.ease(to: CameraOptions(cameraState: camera), duration: 1.1)
         }
 //        DispatchQueue.main.async { [weak self] in
 //            guard let self = self else { return }
@@ -200,15 +227,26 @@ struct FollowUser3DOptions {
 }
 
 class ContainPoint: CameraMode {
-  let mapView: MapView
+  var mapView: MapView?
   let focusCoordinate: CLLocationCoordinate2D
   var camera: CameraController?
   var rtlsOptions: RtlsOptions?
   var lastLocation: CLLocationCoordinate2D?
 
+  private let tag = "ContainPoint"
   init(mapView: MapView, focusCoordinate: CLLocationCoordinate2D) {
     self.mapView = mapView
     self.focusCoordinate = focusCoordinate
+  }
+
+  deinit {
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
+    dispose()
+  }
+
+  func dispose() {
+    Logger(verbosity: .info).log(tag: tag, message: "dispose")
+    mapView = nil
   }
 
   func onEnter() {
@@ -221,11 +259,13 @@ class ContainPoint: CameraMode {
   }
 
   private func showUserAndPoint() {
-    guard let lastLocation = lastLocation else { return }
-    let options = mapView.mapboxMap.camera(for: .multiPoint(.init([lastLocation, focusCoordinate])), padding: .init(top: 0.0, left: 0.0, bottom: 0.0, right: 4.0), bearing: 90, pitch: 0)
+    guard
+      let lastLocation = lastLocation,
+      let options = mapView?.mapboxMap.camera(for: .multiPoint(.init([lastLocation, focusCoordinate])), padding: .init(top: 0.0, left: 0.0, bottom: 0.0, right: 4.0), bearing: 90, pitch: 0)
+    else { return }
     //let options = mapView.mapboxMap.camera(for: .init(coordinates: [lastLocation, focusCoordinate]), padding: .zero, bearing: 90, pitch: 0)
     DispatchQueue.main.async {
-      self.mapView.camera.ease(to: options, duration: 1)
+      self.mapView?.camera.ease(to: options, duration: 1)
     }
   }
 }
