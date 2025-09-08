@@ -78,6 +78,13 @@ public class WorldMapController: IMapController {
     )
   }
 
+  deinit {
+    dispose()
+  }
+
+  public func dispose() {
+    // TODO: Dispose
+  }
 
   var cameraOffset: Double = 0
   @objc func orientationDidChange(_ notification: Notification) {
@@ -138,7 +145,7 @@ public class WorldMapController: IMapController {
   }
 
   private func onStyleLoaded(style: Style) {
-    internalLocation = LocationController()
+    internalLocation = LocationController(coordinateConverter: mapRepository.mapData.converter, mapOptions: mapRepository.mapOptions)
 
     mapRepository.style = style
 

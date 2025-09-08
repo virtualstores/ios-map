@@ -8,7 +8,7 @@
 import Foundation
 import VSFoundation
 
-protocol IMapControllerState {
+protocol IMapControllerState: Disposable {
   var state: MapState { get }
   func set(mapController: IMapController?, options: StateOptions)
   func onEnter(previousState: MapState?)
@@ -20,6 +20,7 @@ protocol IMapControllerState {
 }
 
 extension IMapControllerState {
+  func dispose() {}
   func onQRCodeStart() {}
   func onPathfindingActivated() {}
   func onPathfindingDeactivated() {}
@@ -28,7 +29,7 @@ extension IMapControllerState {
 }
 
 class MapControllerStatePending {
-  @Inject var mapRepository: MapRepository
+  @OptionalInject var mapRepository: MapRepository?
   var stateMachine: IMapStateMachine
   private var previousState: MapState?
   private var mapController: IMapController?
@@ -42,6 +43,12 @@ class MapControllerStatePending {
 }
 
 extension MapControllerStatePending: IMapControllerState {
+  func dispose() {
+    mapRepository = nil
+    previousState = nil
+    mapController = nil
+  }
+  
   var state: MapState { .pending }
 
   func set(mapController: IMapController?, options: StateOptions) {
@@ -61,8 +68,8 @@ extension MapControllerStatePending: IMapControllerState {
 
   func onPathfindingActivated() {
     guard
-      mapRepository.isPositionActive,
-      mapRepository.currentPosition?.trustedPosition ?? false || mapRepository.isReferenceAngleCertain
+      mapRepository?.isPositionActive ?? false,
+      mapRepository?.currentPosition?.trustedPosition ?? false || mapRepository?.isReferenceAngleCertain ?? false
     else { stateMachine.transitionToSate(toState: .locationUnknown, fromState: state); return }
     stateMachine.transitionToSate(toState: .locationKnown, fromState: state)
   }
@@ -81,6 +88,10 @@ class MapControllerStateLocationKnown {
 
 extension MapControllerStateLocationKnown: IMapControllerState {
   var state: MapState { .locationKnown }
+
+  func dispose() {
+    mapController = nil
+  }
 
   func onEnter(previousState: MapState?) {
     mapController?.camera.updateCameraMode(with: .followUser3D())
@@ -136,6 +147,10 @@ class MapControllerStateLocationUnknown {
 extension MapControllerStateLocationUnknown: IMapControllerState {
   var state: MapState { .locationUnknown }
 
+  func dispose() {
+    mapController = nil
+  }
+  
   func onEnter(previousState: MapState?) {
     lastLocationUpdateTime = .init()
     mapController?.camera.updateCameraMode(with: .containMap)

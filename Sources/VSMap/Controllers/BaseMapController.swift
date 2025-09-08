@@ -60,14 +60,18 @@ public class BaseMapController {
   }
 
   deinit {
-    print("\(tag).deinit")
-    if let controller = cameraController {
-      mapView.location.removeLocationConsumer(consumer: controller)
-    }
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
+    dispose()
   }
 
   public func dispose() {
+    Logger(verbosity: .info).log(tag: tag, message: "dispose")
     stateMachine.set(mapController: nil, options: .init())
+    if let controller = cameraController {
+      controller.dispose()
+      mapView.location.removeLocationConsumer(consumer: controller)
+    }
+    pathfinderController.dispose()
   }
 
   // maybe just be able to send new useraccuracylevel parameters?
@@ -131,7 +135,7 @@ public class BaseMapController {
   }
 
   private func onStyleLoaded(style: Style) {
-    internalLocation = LocationController()
+    internalLocation = LocationController(coordinateConverter: mapRepository.mapData.converter, mapOptions: mapRepository.mapOptions)
 
     mapRepository.style = style
 

@@ -8,7 +8,7 @@
 import Combine
 import VSFoundation
 
-protocol IMapStateMachine {
+protocol IMapStateMachine: Disposable {
   var mapStatePublisher: CurrentValueSubject<MapState?, Never> { get }
   func onQRCodeStart(mapController: IMapController)
   func set(mapController: IMapController?, options: StateOptions)
@@ -34,10 +34,11 @@ public struct StateOptions {
 }
 
 class BaseMapStateMachine {
-  @Inject var mapRepository: MapRepository
+  @OptionalInject var mapRepository: MapRepository?
 
   var mapStatePublisher: CurrentValueSubject<MapState?, Never> = .init(nil)
 
+  private let tag = "BaseMapStateMachine"
   private var states: [MapState: IMapControllerState] = [:]
 
   private var currentState: IMapControllerState?
@@ -45,6 +46,7 @@ class BaseMapStateMachine {
   private var cancellable = Set<AnyCancellable>()
 
   init() {
+    Logger(verbosity: .info).log(tag: tag, message: "init")
     states = [
       .pending: MapControllerStatePending(stateMachine: self),
       .locationKnown: MapControllerStateLocationKnown(stateMachine: self),
@@ -52,6 +54,11 @@ class BaseMapStateMachine {
     ]
     currentState = states[.pending]
     currentState?.onEnter(previousState: nil)
+  }
+
+  deinit {
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
+    dispose()
   }
 
   private func bindPublishers() {
@@ -69,6 +76,15 @@ class BaseMapStateMachine {
 }
 
 extension BaseMapStateMachine: IMapStateMachine {
+  func dispose() {
+    Logger(verbosity: .info).log(tag: tag, message: "dispose")
+    mapRepository = nil
+    currentState = nil
+    mapController = nil
+    states.forEach { $0.value.dispose() }
+    states = [:]
+  }
+  
   func onQRCodeStart(mapController: IMapController) {
     guard self.mapController?.id == mapController.id else { return }
     currentState?.onQRCodeStart()
@@ -81,7 +97,7 @@ extension BaseMapStateMachine: IMapStateMachine {
 
     states.forEach { $0.value.set(mapController: mapController, options: options) }
 
-    if mapRepository.isPositionActive {
+    if mapRepository?.isPositionActive ?? false {
       transitionToSate(toState: .pending, fromState: currentState?.state)
     } else {
       transitionToSate(toState: .pending, fromState: nil)

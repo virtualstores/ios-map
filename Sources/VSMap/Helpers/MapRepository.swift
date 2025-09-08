@@ -9,7 +9,8 @@ import Foundation
 import VSFoundation
 import MapboxMaps
 
-public class MapRepository {
+public class MapRepository: Disposable {
+    private let tag: String = "MapRepository"
     private var _mapData: MapData?
     private var _mapOptions: VSFoundation.MapOptions?
     private var _stateOptions: StateOptions?
@@ -86,7 +87,17 @@ public class MapRepository {
         }
     }
 
-  func reset() {
+  init() {
+    Logger(verbosity: .info).log(tag: tag, message: "init")
+  }
+
+  deinit {
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
+    dispose()
+  }
+
+  public func dispose() {
+    Logger(verbosity: .info).log(tag: tag, message: "dispose")
     _mapData = nil
     _mapOptions = nil
     _stateOptions = nil
@@ -95,5 +106,6 @@ public class MapRepository {
     displayMultiplePositions = false
     currentPosition = nil
     isPositionActive = false
+    isReferenceAngleCertain = false
   }
 }
