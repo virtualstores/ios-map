@@ -142,13 +142,11 @@ class CameraController: ICameraController {
         let height = converter.convertFromMetersToMapCoordinate(input: rtls.heightInMeters)
 
         //print("Area", rtls.widthInMeters, rtls.heightInMeters, rtls.widthInMeters * rtls.heightInMeters, rtls.widthInMeters * rtls.heightInMeters / .pi)
-        //Area 93.17 112.4 10472.308 3333.439167561601 IKEA delft markethall
         let cameraPadding = converter.convertFromMetersToMapCoordinate(input: 2)
         let cameraBounds: CoordinateBounds
         var bearing: Double = 0.0
-        //var bearing: Double = 90.0
         if let boundingBox = rtls.boundingBoxInMeters {
-            bearing = rtls.id == 76 ? 90 : 0
+            bearing = boundingBox.bearing//rtls.id == 76 ? 90 : 0
             var padding = bearing != 0 ? boundingBox.padding.multiply(with: 10) : boundingBox.padding
             if rtls.widthInMeters > rtls.heightInMeters && bearing == 0.0 {
                 padding = padding.multiply(width: 12, height: 16)
