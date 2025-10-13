@@ -19,7 +19,7 @@ public class WorldCameraController: ICameraController {
     }
   }
 
-  public var cameraState: CameraState { mapView.cameraState }
+  public var cameraState: CameraState { mapView.mapboxMap.cameraState }
 
   private let tag = "WorldCameraController"
   private var mapView: MapView
@@ -88,12 +88,6 @@ public class WorldCameraController: ICameraController {
       self.revertCameraModeTimer?.invalidate()
       self.revertCameraModeTimer = nil
     })
-  }
-}
-
-extension WorldCameraController: LocationConsumer {
-  public func locationUpdate(newLocation: Location) {
-    self.lastLocation = newLocation
   }
 }
 

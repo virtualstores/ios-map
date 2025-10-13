@@ -91,7 +91,6 @@ class MLPositionLineController {
   }
 
   private var converter: ICoordinateConverter { mapRepository.mapData.converter }
-  private var style: Style { mapRepository.style }
   private var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   private var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
   private var lastPosition: CGPoint = .zero
@@ -99,16 +98,14 @@ class MLPositionLineController {
   //var largestDistance: Double = 0
 
   deinit {
-    print("\(tag).deinit")
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
   }
 }
 
 private extension MLPositionLineController {
   func initSources() {
-    _mlLineSource = GeoJSONSource()
-    _mlLineSource?.data = .empty
-
-    _mlLineLayer = CircleLayer(id: LAYER_ID)
+    _mlLineSource = GeoJSONSource(id: SOURCE_ID)
+    _mlLineLayer = CircleLayer(id: LAYER_ID, source: mlLineSource.id)
     _mlLineLayer?.source = SOURCE_ID
     //_mlLineLayer?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
     //_mlLineLayer?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
@@ -126,32 +123,27 @@ private extension MLPositionLineController {
       }
     )
 
-    _mlLineSourceQueue = GeoJSONSource()
-    _mlLineSourceQueue?.data = .empty
-
-    _mlLineLayerQueue = CircleLayer(id: QUEUE_LAYER_ID)
+    _mlLineSourceQueue = GeoJSONSource(id: QUEUE_SOURCE_ID)
+    _mlLineLayerQueue = CircleLayer(id: QUEUE_LAYER_ID, source: mlLineSourceQueue.id)
     _mlLineLayerQueue?.source = QUEUE_SOURCE_ID
     //_mlLineLayerQueue?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
     //_mlLineLayerQueue?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
     _mlLineLayerQueue?.circleColor = _mlLineLayer?.circleColor
-    _mlLineLayerQueue?.visibility = _mlLineLayer?.visibility
+    _mlLineLayerQueue?.visibility = mlLineLayer.visibility
     _mlLineLayerQueue?.circleRadius = _mlLineLayer?.circleRadius
 
-    _gpsLineSource = GeoJSONSource()
-    _gpsLineSource?.data = .empty
+    _gpsLineSource = GeoJSONSource(id: GPS_SOURCE_ID)
 
-    _gpsLineLayer = CircleLayer(id: GPS_LAYER_ID)
+    _gpsLineLayer = CircleLayer(id: GPS_LAYER_ID, source: gpsLineSource.id)
     _gpsLineLayer?.source = GPS_SOURCE_ID
     //_gpsLineLayer?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
     //_gpsLineLayer?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
     _gpsLineLayer?.circleColor = .constant(StyleColor(.blue))
-    _gpsLineLayer?.visibility = _mlLineLayer?.visibility
+    _gpsLineLayer?.visibility = mlLineLayer.visibility
     _gpsLineLayer?.circleRadius = _mlLineLayer?.circleRadius
 
-    _circleSource = GeoJSONSource()
-    _circleSource?.data = .empty
-
-    _circleLayer = CircleLayer(id: CIRCLE_LAYER_ID)
+    _circleSource = GeoJSONSource(id: CIRCLE_SOURCE_ID)
+    _circleLayer = CircleLayer(id: CIRCLE_LAYER_ID, source: circleSource.id)
     _circleLayer?.source = CIRCLE_SOURCE_ID
     _circleLayer?.circleColor = .constant(.init(.purple))
     _circleLayer?.circleRadius = .expression(
@@ -165,10 +157,8 @@ private extension MLPositionLineController {
       }
     )
 
-    _mlCircleSource = GeoJSONSource()
-    _mlCircleSource?.data = .empty
-
-    _mlCircleLayer = CircleLayer(id: ML_USER_LAYER_ID)
+    _mlCircleSource = GeoJSONSource(id: ML_USER_SOURCE_ID)
+    _mlCircleLayer = CircleLayer(id: ML_USER_LAYER_ID, source: mlCircleSource.id)
     _mlCircleLayer?.source = ML_USER_SOURCE_ID
     _mlCircleLayer?.circleColor = .constant(.init(.orange))
     _mlCircleLayer?.circleStrokeColor = .constant(.init(.white))
@@ -200,11 +190,11 @@ private extension MLPositionLineController {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       //try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.lineString(LineString(currentPath))))
-      try? style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPath))))
-      try? style.updateGeoJSONSource(withId: QUEUE_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPathQueue.asArray()))))
-      try? style.updateGeoJSONSource(withId: GPS_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentGPSPath))))
+      mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPath))))
+      mapRepository.map.updateGeoJSONSource(withId: QUEUE_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentMLPathQueue.asArray()))))
+      mapRepository.map.updateGeoJSONSource(withId: GPS_SOURCE_ID, geoJSON: .geometry(.multiPoint(.init(currentGPSPath))))
       if let coordinate = currentMLPosition {
-        try? style.updateGeoJSONSource(withId: ML_USER_SOURCE_ID, geoJSON: .geometry(.point(.init(coordinate))))
+        mapRepository.map.updateGeoJSONSource(withId: ML_USER_SOURCE_ID, geoJSON: .geometry(.point(.init(coordinate))))
       } else {
         hideMLUser()
       }
@@ -214,7 +204,7 @@ private extension MLPositionLineController {
   func refreshCircle() {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
-      try? style.updateGeoJSONSource(withId: CIRCLE_SOURCE_ID, geoJSON: .geometry(.multiPoint(MultiPoint(particleCoordinates))))
+      mapRepository.map.updateGeoJSONSource(withId: CIRCLE_SOURCE_ID, geoJSON: .geometry(.multiPoint(MultiPoint(particleCoordinates))))
     }
   }
 }
@@ -274,16 +264,16 @@ internal extension MLPositionLineController {
   func onStyleUpdated() {
     initSources()
 
-    try? style.addSource(mlLineSource, id: SOURCE_ID)
-    try? style.addLayer(mlLineLayer, layerPosition: LayerPosition.below("marker-layer"))
-    try? style.addSource(mlLineSourceQueue, id: QUEUE_SOURCE_ID)
-    try? style.addLayer(mlLineLayerQueue, layerPosition: LayerPosition.below("marker-layer"))
-    try? style.addSource(gpsLineSource, id: GPS_SOURCE_ID)
-    try? style.addLayer(gpsLineLayer, layerPosition: LayerPosition.below("marker-layer"))
-    try? style.addSource(circleSource, id: CIRCLE_SOURCE_ID)
-    try? style.addLayer(circleLayer, layerPosition: LayerPosition.below("marker-layer"))
-    try? style.addSource(mlCircleSource, id: ML_USER_SOURCE_ID)
-    try? style.addLayer(mlCircleLayer, layerPosition: LayerPosition.below("marker-layer"))
+    try? mapRepository.map.addSource(mlLineSource)
+    try? mapRepository.map.addLayer(mlLineLayer, layerPosition: LayerPosition.below("marker-layer"))
+    try? mapRepository.map.addSource(mlLineSourceQueue)
+    try? mapRepository.map.addLayer(mlLineLayerQueue, layerPosition: LayerPosition.below("marker-layer"))
+    try? mapRepository.map.addSource(gpsLineSource)
+    try? mapRepository.map.addLayer(gpsLineLayer, layerPosition: LayerPosition.below("marker-layer"))
+    try? mapRepository.map.addSource(circleSource)
+    try? mapRepository.map.addLayer(circleLayer, layerPosition: LayerPosition.below("marker-layer"))
+    try? mapRepository.map.addSource(mlCircleSource)
+    try? mapRepository.map.addLayer(mlCircleLayer, layerPosition: LayerPosition.below("marker-layer"))
     hide()
   }
 }
@@ -306,46 +296,46 @@ extension MLPositionLineController: IMLPositionLineController {
   }
 
   public func showMLPath() {
-    try? style.updateLayer(withId: QUEUE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: QUEUE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   public func showFullMLPath() {
-    try? style.updateLayer(withId: LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   public func showFullGPSPath() {
-    try? style.updateLayer(withId: GPS_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: GPS_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   public func showParticles() {
-    try? style.updateLayer(withId: CIRCLE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: CIRCLE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   public func showMLUser() {
     guard mlCircleLayer.visibility == .constant(.none) else { return }
-    try? style.updateLayer(withId: ML_USER_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: ML_USER_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
     _mlCircleLayer?.visibility = .constant(.visible)
   }
 
   public func hideMLPath() {
-    try? style.updateLayer(withId: QUEUE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: QUEUE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   public func hideFullMLPath() {
-    try? style.updateLayer(withId: LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   public func hideFullGPSPath() {
-    try? style.updateLayer(withId: GPS_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: GPS_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   public func hideParticles() {
-    try? style.updateLayer(withId: CIRCLE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: CIRCLE_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   public func hideMLUser() {
     guard mlCircleLayer.visibility == .constant(.visible) else { return }
-    try? style.updateLayer(withId: ML_USER_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: ML_USER_LAYER_ID, type: CircleLayer.self) { $0.visibility = .constant(.none) }
     _mlCircleLayer?.visibility = .constant(.none)
   }
 }

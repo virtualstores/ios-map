@@ -13,27 +13,22 @@ class MapboxOfflineManager {
 
   @Inject var mapRepository: MapRepository
 
-  private var mapBoxToken: String { mapRepository.map.resourceOptions.accessToken }
-
   private var _source: GeoJSONSource? = nil
   private var source: GeoJSONSource {
     guard let source = _source else { fatalError("Offline Area Source is not initialized") }
-
     return source
   }
 
   private var _layer: LineLayer? = nil
   private var layer: LineLayer {
     guard let layer = _layer else { fatalError("markerLayer is not initialized") }
-
     return layer
   }
 
   func initSource() {
-    _source = GeoJSONSource()
-    _source?.data = .empty
+    _source = GeoJSONSource(id: SOURCE_ID)
 
-    _layer = LineLayer(id: LAYER_ID)
+    _layer = LineLayer(id: LAYER_ID, source: source.id)
     _layer?.source = SOURCE_ID
     _layer?.lineColor = .constant(.init(.red))
     _layer?.lineWidth = .constant(2)
@@ -41,12 +36,10 @@ class MapboxOfflineManager {
 
   var area = [[[CLLocationCoordinate2D]]]()
   func refreshLines() {
-    try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .feature(.init(geometry: .multiPolygon(.init(area)))))
+    mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .feature(.init(geometry: .multiPolygon(.init(area)))))
   }
 
-  private lazy var offlineManager: OfflineManager = {
-    OfflineManager.init(resourceOptions: ResourceOptions(accessToken: mapBoxToken))
-  }()
+  private let offlineManager = OfflineManager()
 
   private lazy var tileStore: TileStore = {
     let tileStore = TileStore.default
@@ -125,7 +118,7 @@ class MapboxOfflineManager {
 
     // 2. Create an offline region with tiles for the Standard or Satellite-Streets style.
     // If you are using a raster tileset you may need to set a different pixelRatio. The default is UIScreen.main.scale.
-    let styleOptions = TilesetDescriptorOptions(styleURI: style, zoomRange: zoomRange)
+    let styleOptions = TilesetDescriptorOptions(styleURI: style, zoomRange: zoomRange, tilesets: nil)
 
     let styleDescriptor = offlineManager.createTilesetDescriptor(for: styleOptions)
 
@@ -200,9 +193,9 @@ class MapboxOfflineManager {
   func onStyleUpdated() {
     initSource()
 
-    try? mapRepository.style.addSource(source, id: SOURCE_ID)
-    try? mapRepository.style.addLayer(layer, layerPosition: LayerPosition.below("puck"))
-    try? mapRepository.style.addLayer(layer, layerPosition: LayerPosition.default)
+    try? mapRepository.map.addSource(source)
+    try? mapRepository.map.addLayer(layer, layerPosition: LayerPosition.below("puck"))
+    try? mapRepository.map.addLayer(layer, layerPosition: LayerPosition.default)
     hide()
   }
 }
@@ -228,11 +221,11 @@ extension MapboxOfflineManager: IMapboxOfflineManager {
   }
 
   func show() {
-    try? mapRepository.style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hide() {
-    try? mapRepository.style.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 }
 

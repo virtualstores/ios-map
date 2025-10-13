@@ -5,12 +5,13 @@
 //  Created by Hripsime on 2022-02-13.
 //
 
-import Foundation
+import Combine
 import CoreLocation
 import CoreGraphics
+import Foundation
+import UIKit
 import VSFoundation
 import MapboxMaps
-import Combine
 
 public class BaseMapController {
   let tag = "BaseMapController"
@@ -44,7 +45,7 @@ public class BaseMapController {
   private var mapData: MapData { mapRepository.mapData }
   private var mapView: MapView { mapViewContainer.mapView }
 
-  private var styleLoaded: Bool = false
+  private var styleLoaded: Bool { mapView.mapboxMap.isStyleLoaded }
 
   public init(with token: String, view: TT2MapView, mapOptions: VSFoundation.MapOptions = .init(), stateOptions: StateOptions = .init()) {
     self.mapViewContainer = view
@@ -69,7 +70,6 @@ public class BaseMapController {
     stateMachine.set(mapController: nil, options: .init())
     if let controller = cameraController {
       controller.dispose()
-      mapView.location.removeLocationConsumer(consumer: controller)
     }
     pathfinderController.dispose()
   }
@@ -101,19 +101,18 @@ public class BaseMapController {
       mapRepository.mapData = mapData
 
       guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
-      styleLoaded = false
       mapViewContainer.mapStyle = mapRepository.mapOptions.mapStyle
       mapViewContainer.addLoadingView()
       mapRepository.map = mapView.mapboxMap
-      mapView.mapboxMap.loadStyleURI(styleURI) { [weak self] result in
-        switch result {
-        case .success(let style):
-          DispatchQueue.main.async {
-            self?.onStyleLoaded(style: style)
-          }
-        case let .failure(error):
+
+      mapView.mapboxMap.loadStyle(styleURI) { (error) in
+        if let error = error {
           Logger(verbosity: .error).log(message: "The map failed to load the style: \(error.localizedDescription)")
-          self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
+          self.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
+        } else {
+          DispatchQueue.main.async {
+            self.onStyleLoaded()
+          }
         }
       }
     }
@@ -134,10 +133,8 @@ public class BaseMapController {
     }
   }
 
-  private func onStyleLoaded(style: Style) {
+  private func onStyleLoaded() {
     internalLocation = LocationController(coordinateConverter: mapRepository.mapData.converter, mapOptions: mapRepository.mapOptions)
-
-    mapRepository.style = style
 
     setupCamera(with: .free)
     markerController.onStyleUpdated()
@@ -146,21 +143,15 @@ public class BaseMapController {
     shelfController.onStyleUpdated()
     mlPositionController.onStyleUpdated()
 
-    mapView.location.overrideLocationProvider(with: locationController)
-    mapView.location.locationProvider.startUpdatingLocation()
-    mapView.location.locationProvider.startUpdatingHeading()
-    mapView.location.options.activityType = .other
+    mapView.location.override(provider: locationController)
     mapView.location.options.puckBearing = .heading
 
-    mapView.ornaments.compassView.isHidden = true
-    mapView.ornaments.scaleBarView.isHidden = true
-    mapView.ornaments.attributionButton.isHidden = true
-    //mapView.ornaments.logoView.isHidden = true
+    mapView.ornaments.options.compass.visibility = .hidden
+    mapView.ornaments.options.scaleBar.visibility = .hidden
 
     let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(gesture:)))
     mapView.addGestureRecognizer(tapGesture)
 
-    styleLoaded = true
     locationController.setOptions(options: mapView.location.options)
     let coordinate = mapRepository.currentPosition?.point.convertFromMeterToLatLng(converter: mapRepository.mapData.converter) ?? CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0)
     locationController.updateUserLocation(newLocation: coordinate, std: 0.0)
@@ -214,7 +205,7 @@ public class BaseMapController {
     }
 
     mapView.location.options.puckType = .puck2D(config)
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
       self.mapViewContainer.dismissLoadingScreen()
     }
   }
@@ -226,7 +217,9 @@ public class BaseMapController {
     if let controller = cameraController {
       controller.resetCameraToMapBounds()
       controller.updateCameraMode(with: mode)
-      mapView.location.addLocationConsumer(newConsumer: controller)
+      mapView.location.onLocationChange.sink { (location) in
+        // TODO: Send to camera controller
+      }
       mapView.gestures.delegate = cameraController
     }
   }
@@ -318,6 +311,7 @@ public class BaseMapController {
     mapViewContainer.addLoadingView()
     cameraController?.set(override: nil)
     cameraController?.reset()
+    pathfinderController.pathfinder?.setUserPosition(position: nil)
     mapRepository.currentPosition = nil
     mapRepository.isPositionActive = false
     if mapRepository.stateOptions.preset == .singleItemWayfinding {
@@ -325,8 +319,6 @@ public class BaseMapController {
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
       self.mapView.location.options.puckType = .none
-      self.mapView.location.locationProvider.stopUpdatingLocation()
-      self.mapView.location.locationProvider.stopUpdatingHeading()
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
         self.mapViewContainer.dismissLoadingScreen()
         self.marker.updateLocation(newLocation: .zero, precision: 0.0)
@@ -351,6 +343,10 @@ extension BaseMapController: IMapController {
   public var shelf: IShelfController { shelfController }
   public var mlPosition: IMLPositionLineController { mlPositionController }
   public var offlineManager: IMapboxOfflineManager { MapboxOfflineManager() }
+
+  public func onForceSync() {
+    stateMachine.onQRCodeStart(mapController: self)
+  }
 }
 
 extension UIImage {

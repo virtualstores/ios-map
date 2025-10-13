@@ -96,7 +96,8 @@ extension MapControllerStateLocationKnown: IMapControllerState {
   func onEnter(previousState: MapState?) {
     mapController?.camera.updateCameraMode(with: .followUser3D())
     mapController?.set(userMarkerVisibility: true)
-    mapController?.path.hidePathfinding()
+    mapController?.path.hideBody()
+    mapController?.path.hideTail()
     mapController?.path.showHead()
     if options.controlStartScanLocationVisibility {
       mapController?.marker.setStartLocationsVisibility(isVisible: false)

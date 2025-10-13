@@ -116,10 +116,10 @@ class CameraController: ICameraController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.resetCameraToMapBounds() }
             return
         }
-        mapView.camera.ease(
-          to: mapView.mapboxMap.camera(for: camera.bounds, padding: .zero, bearing: camera.bearing, pitch: 0),
-          duration: 0.4
-        )
+
+        // TODO: do
+        let options = mapView.mapboxMap.camera(for: camera.bounds, padding: .zero, bearing: camera.bearing, pitch: 0, maxZoom: nil, offset: nil)
+        mapView.camera.ease(to: options, duration: 0.4)
     }
     
     func resetCameraToMapMode() {
@@ -193,12 +193,6 @@ class CameraController: ICameraController {
 
     func reset() {
       hasFollowedUser = false
-    }
-}
-
-extension CameraController: LocationConsumer {
-    public func locationUpdate(newLocation: Location) {
-        self.lastLocation = newLocation
     }
 }
 

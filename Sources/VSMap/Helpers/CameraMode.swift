@@ -125,7 +125,7 @@ internal class FollowUser3D: CameraMode {
     var camera: CameraController?
     var rtlsOptions: RtlsOptions?
     let zoomLevel: Double
-    var direction: Double { mapView?.location.latestLocation?.headingDirection ?? .zero }
+    var direction: Double = .zero//{ mapView?.location.latestLocation?.headingDirection ?? .zero }
     var std: Double = 2.0
     var lastLocation: CLLocationCoordinate2D?
 
@@ -156,7 +156,7 @@ internal class FollowUser3D: CameraMode {
     
     func onLocationUpdated(newLocation: CLLocationCoordinate2D, direction: Double, std: Double) {
         self.lastLocation = newLocation
-        //self.direction = direction
+        self.direction = direction
         self.std = std
         self.moveCameraToUser()
     }
@@ -166,7 +166,7 @@ internal class FollowUser3D: CameraMode {
         guard
           let lastLocation = lastLocation ?? mapView?.location.latestLocation?.coordinate,
           lastLocation != CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0),
-          var camera = self.mapView?.cameraState
+          var camera = mapView?.mapboxMap.cameraState
         else { return }
 
         camera.center = lastLocation

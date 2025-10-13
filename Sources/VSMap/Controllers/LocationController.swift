@@ -10,8 +10,8 @@ import CoreLocation
 import VSFoundation
 import MapboxMaps
 
-class LocationController: ILocation, LocationProvider {
-  let tag = "LocationController"
+class LocationController: ILocation {
+    let tag = "LocationController"
     // MARK: ILocation properties
     public var userMarkVisibility: UserMarkVisibility
     public var position: CLLocation?
@@ -23,7 +23,10 @@ class LocationController: ILocation, LocationProvider {
     public var heading: CLHeading?
     public var headingOrientation: CLDeviceOrientation
     
-    weak var delegate: LocationProviderDelegate?
+//    weak var delegate: LocationProviderDelegate?
+
+    weak var locationObserver: LocationObserver?
+    weak var headingObserver: HeadingObserver?
 
     private let converter: ICoordinateConverter
     private let mapOptions: VSFoundation.MapOptions
@@ -38,7 +41,7 @@ class LocationController: ILocation, LocationProvider {
     }
 
     deinit {
-      print("\(tag).deinit")
+      Logger(verbosity: .info).log(tag: tag, message: "deinit")
     }
 
     // MARK: ILocation implementation
@@ -53,13 +56,13 @@ class LocationController: ILocation, LocationProvider {
         }
         let location = CLLocation(
           coordinate: newLocation,
-          altitude: 1.0,
+          altitude: 0.0,
           horizontalAccuracy: CLLocationAccuracy(converter.convertFromMetersToMapMeters(input: accuracyOverride ?? accuracy)),
-          verticalAccuracy: 1.0,
+          verticalAccuracy: 0.0,
           timestamp: Date()
         )
 
-        delegate?.locationProvider(self, didUpdateLocations: [location])
+        locationObserver?.onLocationUpdateReceived(for: [.init(clLocation: location)])
     }
 
     public func updateUserLocation(location: VPSOutputSignal.LatLngPosition.Location) {
@@ -71,7 +74,7 @@ class LocationController: ILocation, LocationProvider {
           timestamp: Date()
         )
 
-        delegate?.locationProvider(self, didUpdateLocations: [location])
+        locationObserver?.onLocationUpdateReceived(for: [.init(clLocation: location)])
     }
   
     public func updateUserLocation(latLng: VPSOutputSignal.LatLngPosition) {
@@ -95,7 +98,7 @@ class LocationController: ILocation, LocationProvider {
           )
         }
 
-        delegate?.locationProvider(self, didUpdateLocations: [location])
+        locationObserver?.onLocationUpdateReceived(for: [.init(clLocation: location)])
     }
 
     public func updateUserDirection(newDirection: Double) {
@@ -103,22 +106,17 @@ class LocationController: ILocation, LocationProvider {
         heading._trueHeading = newDirection
         heading._magneticHeading = newDirection
         self.heading = heading
-        delegate?.locationProvider(self, didUpdateHeading: heading)
+        headingObserver?.onHeadingUpdate(.init(direction: newDirection, accuracy: .zero, timestamp: .init()))
     }
     
     public func reset() { }
     
     // MARK: LocationeProvider implementation
-    public func setDelegate(_ delegate: LocationProviderDelegate) {
-        self.delegate = delegate
-    }
-    
     public func requestAlwaysAuthorization() { }
     
     public func requestWhenInUseAuthorization() {
         authorizationStatus = .notDetermined
         accuracyAuthorization = .fullAccuracy
-        delegate?.locationProviderDidChangeAuthorization(self)
     }
     
     public func requestTemporaryFullAccuracyAuthorization(withPurposeKey purposeKey: String) { }
@@ -138,21 +136,32 @@ class LocationController: ILocation, LocationProvider {
     }
 }
 
-// MARK: LocationProviderDelegate
-extension LocationController: LocationProviderDelegate {
-    public func locationProvider(_ provider: LocationProvider, didUpdateLocations locations: [CLLocation]) {
-        Logger().log(message: "locationProvider didUpdateLocations")
-    }
-    
-    public func locationProvider(_ provider: LocationProvider, didUpdateHeading newHeading: CLHeading) {
-        Logger().log(message: "locationProvider didUpdateHeading")
-    }
-    
-    public func locationProvider(_ provider: LocationProvider, didFailWithError error: Error) {
-        Logger().log(message: "locationProvider didFailWithError")
-    }
-    
-    public func locationProviderDidChangeAuthorization(_ provider: LocationProvider) {
-        Logger().log(message: "locationProvider didFailWithError")
-    }
+extension LocationController: LocationProvider {
+  func addLocationObserver(for observer: LocationObserver) {
+    locationObserver = observer
+  }
+
+  func removeLocationObserver(for observer: LocationObserver) {
+    locationObserver = nil
+  }
+
+  func getLastObservedLocation() -> Location? {
+    // TODO: Do
+    return nil
+  }
+}
+
+extension LocationController: HeadingProvider {
+  var latestHeading: MapboxMaps.Heading? {
+    guard let heading = heading else { return nil }
+    return .init(direction: heading.headingDirection, accuracy: heading.headingAccuracy)
+  }
+  
+  func add(headingObserver: HeadingObserver) {
+    self.headingObserver = headingObserver
+  }
+  
+  func remove(headingObserver: HeadingObserver) {
+    self.headingObserver = nil
+  }
 }
