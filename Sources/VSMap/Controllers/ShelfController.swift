@@ -69,7 +69,7 @@ class ShelfController: IShelfController {
   }
 
   deinit {
-    print("\(tag).deinit")
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
   }
 
   func onFloorChange(mapRepository: MapRepository) {
@@ -77,11 +77,10 @@ class ShelfController: IShelfController {
   }
 
   func initSources() {
-    _shelvesSource = GeoJSONSource()
-    _shelvesSource?.data = .empty
+    _shelvesSource = GeoJSONSource(id: SHELVES_SOURCE)
 
     // MARK: ShelvesFill
-    _shelvesFillLayer = FillExtrusionLayer(id: SHELVES_FILL_LAYER)
+    _shelvesFillLayer = FillExtrusionLayer(id: SHELVES_FILL_LAYER, source: shelvesSource.id)
     _shelvesFillLayer?.source = SHELVES_SOURCE
 
     _shelvesFillLayer?.visibility = .constant(.none)
@@ -98,7 +97,7 @@ class ShelfController: IShelfController {
     _shelvesFillLayer?.filter = Exp(.eq) { Exp(.get) { PROP_VISIBLE }; true }
 
     // MARK: ShelvesLine
-    _shelvesLineLayer = LineLayer(id: SHELVES_OUTLINES_LAYER)
+    _shelvesLineLayer = LineLayer(id: SHELVES_OUTLINES_LAYER, source: shelvesSource.id)
     _shelvesLineLayer?.source = SHELVES_SOURCE
 
     _shelvesLineLayer?.visibility = .constant(.none)
@@ -133,10 +132,9 @@ class ShelfController: IShelfController {
     _shelvesLineLayer?.filter = Exp(.eq) { Exp(.get) { PROP_VISIBLE }; true }
 
     // MARK: MarkedShelves
-    _markedShelvesSource = GeoJSONSource()
-    _markedShelvesSource?.data = .empty
+    _markedShelvesSource = GeoJSONSource(id: MARKED_SHELVES_SOURCE)
 
-    _markedShelvesFillLayer = CircleLayer(id: MARKED_SHELVES_LAYER)
+    _markedShelvesFillLayer = CircleLayer(id: MARKED_SHELVES_LAYER, source: markedShelvesSource.id)
     _markedShelvesFillLayer?.source = MARKED_SHELVES_SOURCE
 
     _markedShelvesFillLayer?.visibility = .constant(.none)
@@ -191,8 +189,8 @@ class ShelfController: IShelfController {
     let markedShelves = shelvesMarkedFeatures.map { $0.value }
     let markedCollection = FeatureCollection(features: markedShelves)
 
-    try? mapRepository.style.updateGeoJSONSource(withId: SHELVES_SOURCE, geoJSON: .featureCollection(collection))
-    try? mapRepository.style.updateGeoJSONSource(withId: MARKED_SHELVES_SOURCE, geoJSON: .featureCollection(markedCollection))
+    mapRepository.map.updateGeoJSONSource(withId: SHELVES_SOURCE, geoJSON: .featureCollection(collection))
+    mapRepository.map.updateGeoJSONSource(withId: MARKED_SHELVES_SOURCE, geoJSON: .featureCollection(markedCollection))
   }
 
   func findCentroid(points: [CGPoint]) -> CGPoint {
@@ -223,14 +221,14 @@ class ShelfController: IShelfController {
   func onStyleUpdated() {
     initSources()
 
-    try? mapRepository.style.addSource(shelvesSource, id: SHELVES_SOURCE)
-    try? mapRepository.style.addSource(markedShelvesSource, id: MARKED_SHELVES_SOURCE)
+    try? mapRepository.map.addSource(shelvesSource)
+    try? mapRepository.map.addSource(markedShelvesSource)
 
-    try? mapRepository.style.addLayer(shelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_SHELVES_LAYER))
-    try? mapRepository.style.addLayer(shelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_WALLS_LAYER))
-    try? mapRepository.style.addLayer(shelvesLineLayer, layerPosition: .below(SHELVES_FILL_LAYER))
-    try? mapRepository.style.addLayer(markedShelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_SHELVES_LAYER))
-    try? mapRepository.style.addLayer(markedShelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_WALLS_LAYER))
+    try? mapRepository.map.addLayer(shelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_SHELVES_LAYER))
+    try? mapRepository.map.addLayer(shelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_WALLS_LAYER))
+    try? mapRepository.map.addLayer(shelvesLineLayer, layerPosition: .below(SHELVES_FILL_LAYER))
+    try? mapRepository.map.addLayer(markedShelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_SHELVES_LAYER))
+    try? mapRepository.map.addLayer(markedShelvesFillLayer, layerPosition: .above(DEFAULT_STYLE_WALLS_LAYER))
   }
 }
 
@@ -248,27 +246,27 @@ extension ShelfController {
   }
 
   func showShelvesLineLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showShelvesMarkLayer() {
-    try? mapRepository.style.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showShelvesFillLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hideShelvesLineLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: SHELVES_OUTLINES_LAYER, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideShelvesMarkLayer() {
-    try? mapRepository.style.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: MARKED_SHELVES_LAYER, type: CircleLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideShelvesFillLayer() {
-    try? mapRepository.style.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: SHELVES_FILL_LAYER, type: FillLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func setShelves(shelves: [ShelfGroup]) {

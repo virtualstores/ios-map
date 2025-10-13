@@ -92,7 +92,7 @@ class PathfinderController: Disposable {
     }
   }
 
-  var style: Style { mapRepository.style }
+//  var style: Style { mapRepository.style }
   var converter: ICoordinateConverter { mapRepository.mapData.converter }
   var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
@@ -122,16 +122,12 @@ class PathfinderController: Disposable {
   func initSources() {
     guard _lineSourceHead == nil else { return }
 
-    _lineSourceHead = GeoJSONSource()
-    _lineSourceHead?.data = .empty
-    _lineSourceBody = GeoJSONSource()
-    _lineSourceBody?.data = .empty
-    _lineSourceTail = GeoJSONSource()
-    _lineSourceTail?.data = .empty
-    _lineSourceEnd = GeoJSONSource()
-    _lineSourceEnd?.data = .empty
+    _lineSourceHead = GeoJSONSource(id: SOURCE_ID_HEAD)
+    _lineSourceBody = GeoJSONSource(id: SOURCE_ID_BODY)
+    _lineSourceTail = GeoJSONSource(id: SOURCE_ID_TAIL)
+    _lineSourceEnd = GeoJSONSource(id: SOURCE_ID_END)
 
-    _lineLayerHead = LineLayer(id: LAYER_ID_HEAD)
+    _lineLayerHead = LineLayer(id: LAYER_ID_HEAD, source: lineSourceHead.id)
     _lineLayerHead?.source = SOURCE_ID_HEAD
     _lineLayerHead?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleHead.lineCap) ?? .round)
     _lineLayerHead?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleHead.lineJoin) ?? .round)
@@ -149,7 +145,7 @@ class PathfinderController: Disposable {
       }
     )
 
-    _lineLayerBody = LineLayer(id: LAYER_ID_BODY)
+    _lineLayerBody = LineLayer(id: LAYER_ID_BODY, source: lineSourceBody.id)
     _lineLayerBody?.source = SOURCE_ID_BODY
     _lineLayerBody?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleBody.lineCap) ?? .round)
     _lineLayerBody?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleBody.lineJoin) ?? .round)
@@ -167,7 +163,7 @@ class PathfinderController: Disposable {
       }
     )
 
-    _lineLayerTail = LineLayer(id: LAYER_ID_TAIL)
+    _lineLayerTail = LineLayer(id: LAYER_ID_TAIL, source: lineSourceTail.id)
     _lineLayerTail?.source = SOURCE_ID_TAIL
     _lineLayerTail?.lineCap = .constant(LineCap(rawValue: pathfindingStyle.pathStyleTail.lineCap) ?? .round)
     _lineLayerTail?.lineJoin = .constant(LineJoin(rawValue: pathfindingStyle.pathStyleTail.lineJoin) ?? .round)
@@ -185,7 +181,7 @@ class PathfinderController: Disposable {
       }
     )
 
-    _circleLayerEnd = CircleLayer(id: LAYER_ID_END)
+    _circleLayerEnd = CircleLayer(id: LAYER_ID_END, source: lineSourceEnd.id)
     _circleLayerEnd?.source = SOURCE_ID_END
     _circleLayerEnd?.circleColor = .constant(StyleColor(pathfindingStyle.lineEndStyle?.color ?? pathfindingStyle.pathStyleHead.lineColor))
     _circleLayerEnd?.visibility = .constant(.visible)
@@ -220,10 +216,10 @@ class PathfinderController: Disposable {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       guard !allGoals.isEmpty else {
-        try? style.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
-        try? style.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
-        try? style.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
-        try? style.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .geometry(.point(Point(CLLocationCoordinate2D(latitude: 0, longitude: 0)))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .geometry(.point(Point(CLLocationCoordinate2D(latitude: 0, longitude: 0)))))
         return
       }
 
@@ -236,18 +232,18 @@ class PathfinderController: Disposable {
         //if let distance = distance(in: path) {
         //  print("DISTANCE", currentCoordinate?.fromLatLngToMeter(converter: converter).distance(to: path.last!.fromLatLngToMeter(converter: converter)), distance)
         //}
-        try? style.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(path))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString(path))))
         if let coordinate = currentHeadPath.last {
-          try? style.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .geometry(.point(Point(coordinate))))
+          mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .geometry(.point(Point(coordinate))))
         }
       }
 
       if body, mapOptions.pathfindingStyle.showPathfindingBody {
-        try? style.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(currentBodyPath))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString(currentBodyPath))))
       }
 
       if tail, mapOptions.pathfindingStyle.showPathfindingTail {
-        try? style.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(currentTailPath))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString(currentTailPath))))
       }
     }
   }
@@ -335,23 +331,31 @@ class PathfinderController: Disposable {
   func onStyleUpdated() {
     initSources()
 
-    try? style.addSource(lineSourceHead, id: SOURCE_ID_HEAD)
-    try? style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("text-layer copy"))
-    try? style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("text-layer"))
-    try? style.addLayer(lineLayerHead, layerPosition: LayerPosition.below("marker-layer"))
+    try? mapRepository.map.addSource(lineSourceHead)
+    try? mapRepository.map.addLayer(lineLayerHead, layerPosition: LayerPosition.below("text-layer copy"))
+    try? mapRepository.map.addLayer(lineLayerHead, layerPosition: LayerPosition.below("text-layer"))
+    try? mapRepository.map.addLayer(lineLayerHead, layerPosition: LayerPosition.below("marker-layer"))
 
-    try? style.addSource(lineSourceBody, id: SOURCE_ID_BODY)
-    try? style.addLayer(lineLayerBody, layerPosition: LayerPosition.below(LAYER_ID_HEAD))
+    try? mapRepository.map.addSource(lineSourceBody)
+    try? mapRepository.map.addLayer(lineLayerBody, layerPosition: LayerPosition.below(LAYER_ID_HEAD))
 
-    try? style.addSource(lineSourceTail, id: SOURCE_ID_TAIL)
-    try? style.addLayer(lineLayerTail, layerPosition: LayerPosition.below(LAYER_ID_BODY))
+    try? mapRepository.map.addSource(lineSourceTail)
+    try? mapRepository.map.addLayer(lineLayerTail, layerPosition: LayerPosition.below(LAYER_ID_BODY))
 
-    try? style.addSource(lineSourceEnd, id: SOURCE_ID_END)
-    //try? style.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
+    try? mapRepository.map.addSource(lineSourceEnd)
+    //try? mapRepository.map.addLayer(circleLayerEnd, layerPosition: LayerPosition.above(LAYER_ID_HEAD))
   }
 
   private func checkIfSwaplocationIsNeeded(goal: PathfindingGoal)  {
 
+  }
+
+  func reset() {
+    currentHeadPath.removeAll()
+    currentBodyPath.removeAll()
+    currentTailPath.removeAll()
+    pathfinder?.set(goals: [], completion: nil)
+    pathfinder?.setUserPosition(position: nil)
   }
 }
 
@@ -451,15 +455,15 @@ extension PathfinderController: IPathfinderController {
   }
 
   func showHead() {
-    try? style.updateLayer(withId: LAYER_ID_HEAD, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID_HEAD, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showBody() {
-    try? style.updateLayer(withId: LAYER_ID_BODY, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID_BODY, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func showTail() {
-    try? style.updateLayer(withId: LAYER_ID_TAIL, type: LineLayer.self) { $0.visibility = .constant(.visible) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID_TAIL, type: LineLayer.self) { $0.visibility = .constant(.visible) }
   }
 
   func hidePathfinding() {
@@ -469,15 +473,15 @@ extension PathfinderController: IPathfinderController {
   }
 
   func hideHead() {
-    try? style.updateLayer(withId: LAYER_ID_HEAD, type: LineLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID_HEAD, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideBody() {
-    try? style.updateLayer(withId: LAYER_ID_BODY, type: LineLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID_BODY, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hideTail() {
-    try? style.updateLayer(withId: LAYER_ID_TAIL, type: LineLayer.self) { $0.visibility = .constant(.none) }
+    try? mapRepository.map.updateLayer(withId: LAYER_ID_TAIL, type: LineLayer.self) { $0.visibility = .constant(.none) }
   }
 
   func hasGoal() -> Bool {

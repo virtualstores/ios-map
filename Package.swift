@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "VSMap",
     platforms: [
-      .iOS(.v13),
+      .iOS(.v14),
       .macOS(.v11),
       .watchOS(.v6)
     ],
@@ -17,8 +17,8 @@ let package = Package(
             targets: ["VSMap"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/virtualstores/ios-foundation.git", .exact("1.9.2")),
-        .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", .upToNextMinor(from: "10.18.0")),
+        .package(url: "https://github.com/virtualstores/ios-foundation.git", .exact("1.10.0")),
+        .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", .exact("11.15.2")),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.

@@ -14,7 +14,6 @@ public class MapRepository: Disposable {
     private var _mapData: MapData?
     private var _mapOptions: VSFoundation.MapOptions?
     private var _stateOptions: StateOptions?
-    private var _style: Style?
     private var _map: MapboxMap?
 
     var mapData: MapData {
@@ -45,16 +44,6 @@ public class MapRepository: Disposable {
         }
 
         set { _stateOptions = newValue }
-    }
-
-    var style: Style {
-        get {
-            guard let style = _style else { fatalError("style not initialized")}
-            
-            return style
-        }
-        
-        set { _style = newValue }
     }
     
     var map: MapboxMap {
@@ -101,7 +90,6 @@ public class MapRepository: Disposable {
     _mapData = nil
     _mapOptions = nil
     _stateOptions = nil
-    _style = nil
     _map = nil
     displayMultiplePositions = false
     currentPosition = nil

@@ -5,16 +5,16 @@
 // Created by Hripsime on 2022-02-18.
 // Copyright (c) 2022 Virtual Stores
 
+import Combine
 import Foundation
-
+import UIKit
 import VSFoundation
 import CoreGraphics
 import MapboxMaps
-import Combine
 
 class MarkerController: IMarkerController {
-    private let TAG = "MarkerController"
-    
+    private let tag = "MarkerController"
+
     private let SOURCE_ID = "marker-source"
     private let UNCLUSTERABLE_SOURCE_ID = "marker-source-no-cluster"
     let MARKER_LAYER_ID = "marker-layer"
@@ -22,6 +22,7 @@ class MarkerController: IMarkerController {
     let CLUSTERED_LAYER_ID = "clustered-marker-layer"
     let CLUSTERED_TEXT_LAYER_ID = "count"
     let CLUSTERED_ICON_LAYER_ID = "clusteredIconLayer"
+    let START_LOCATION_MARKER_LAYER_ID = "start-location-marker-layer"
     let FOCUSED_LAYER_ID = "focused-marker-layer"
     
     private let CLUSTER_ICON = "clusterIcon"
@@ -30,6 +31,7 @@ class MarkerController: IMarkerController {
     
     private let PROP_ID = "markerId"
     private let PROP_ICON = "iconName"
+    private let PROP_ICON_START_LOCATION = "iconNameStartLocation"
     private let PROP_DECORATION = "marker_decoration"
     private let PROP_CLUSTER_IDS = "cluster_ids"
     private let PROP_FOCUSED = "mark_focused"
@@ -72,14 +74,20 @@ class MarkerController: IMarkerController {
     
     private var _markerLayer: SymbolLayer? = nil
     private var markerLayer: SymbolLayer {
-        guard let markerLayer = _markerLayer else { fatalError("markerLayer is not initialized") }
-        return markerLayer
+        guard let layer = _markerLayer else { fatalError("markerLayer is not initialized") }
+        return layer
     }
-    
+
+    private var _startLocationMarkerLayer: SymbolLayer? = nil
+    private var startMarkerLayer: SymbolLayer {
+        guard let layer = _startLocationMarkerLayer else { fatalError("startMarkerLayer is not initialized") }
+        return layer
+    }
+
     private var _focusedMarkerLayer: SymbolLayer? = nil
     private var focusedMarkerLayer: SymbolLayer {
-        guard let focusedMarkerLayer = _focusedMarkerLayer else { fatalError("selectedMarkerLayer is not initialized") }
-        return focusedMarkerLayer
+        guard let layer = _focusedMarkerLayer else { fatalError("selectedMarkerLayer is not initialized") }
+        return layer
     }
 
     func onFloorChange(mapRepository: MapRepository) {
@@ -88,11 +96,11 @@ class MarkerController: IMarkerController {
     }
 
   deinit {
-    print("\(TAG).deinit")
+    Logger(verbosity: .info).log(tag: tag, message: "deinit")
   }
 
     func initSources() {
-        _markerSource = GeoJSONSource()
+        _markerSource = GeoJSONSource(id: SOURCE_ID)
 //        _markerSource?.cluster = mapOptions.cluster.clusteringEnabled
 //        _markerSource?.clusterRadius = mapOptions.cluster.clusterRadius
 //        _markerSource?.clusterMaxZoom = mapOptions.cluster.clusterMaxZoom
@@ -113,9 +121,9 @@ class MarkerController: IMarkerController {
 //            PROP_TRANSPARENCY : Expression(.accumulated)
 //        ]
 
-        _markerSource?.data = .empty
+//        _markerSource?.data = .empty
         
-        _markerLayer = SymbolLayer(id: MARKER_LAYER_ID)
+        _markerLayer = SymbolLayer(id: MARKER_LAYER_ID, source: markerSource.id)
         _markerLayer?.source = SOURCE_ID
         
         _markerLayer?.iconImage = .expression(Exp(.get) { PROP_ICON })
@@ -139,7 +147,31 @@ class MarkerController: IMarkerController {
         _markerLayer?.visibility = .constant(.visible)
         _markerLayer?.filter = Exp(.eq) { Exp(.get) { PROP_FOCUSED }; false }
 
-        _focusedMarkerLayer = SymbolLayer(id: FOCUSED_LAYER_ID)
+        _startLocationMarkerLayer = SymbolLayer(id: START_LOCATION_MARKER_LAYER_ID, source: markerSource.id)
+        _startLocationMarkerLayer?.source = SOURCE_ID
+
+        _startLocationMarkerLayer?.iconImage = .expression(Exp(.get) { PROP_ICON_START_LOCATION })
+        _startLocationMarkerLayer?.iconAnchor = .constant(IconAnchor(rawValue: mapMarkOptions.anchor.rawValue) ?? .bottom)
+          //_startLocationMarkerLayer?.iconAnchor = .constant(.top)
+        _startLocationMarkerLayer?.iconOffset = .constant([mapMarkOptions.offsetX, mapMarkOptions.offsetY]) // use marker offset
+
+        _startLocationMarkerLayer?.iconSize = .constant(mapMarkOptions.scaleSize)  //options.mapMark.scaleSize
+        //_startLocationMarkerLayer?.iconSize = .expression(
+        //  Exp(.interpolate) {
+        //    Exp(.exponential) { 2 }
+        //    Exp(.zoom)
+        //    [
+        //      0.0: 0.0,
+        //      22.0: mapMarkOptions.scaleSize * 20_000
+        //    ]
+        //  }
+        //)
+        _startLocationMarkerLayer?.iconAllowOverlap = .constant(false)
+        _startLocationMarkerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
+        _startLocationMarkerLayer?.visibility = .constant(.visible)
+        _startLocationMarkerLayer?.filter = Exp(.eq) { Exp(.get) { PROP_FOCUSED }; false }
+
+        _focusedMarkerLayer = SymbolLayer(id: FOCUSED_LAYER_ID, source: markerSource.id)
         _focusedMarkerLayer?.source = SOURCE_ID
 
         _focusedMarkerLayer?.iconImage = .expression(Exp(.get) { PROP_ICON })
@@ -188,13 +220,13 @@ class MarkerController: IMarkerController {
         
         let featureCollection = FeatureCollection(features: markers)
         _markerSource?.data = .featureCollection(featureCollection)
-        try? mapRepository.style.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .featureCollection(featureCollection))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID, geoJSON: .featureCollection(featureCollection))
     }
     
     private func create(marker: MapMark, completion: @escaping (Result<Feature, Error>) -> Void) {
         marker.createViewHolder { [weak self] (holder) in
             guard let self = self else { return }
-            try? self.mapRepository.style.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
+            try? self.mapRepository.map.addImage(holder.renderedBitmap, id: holder.imageId, stretchX: [], stretchY: [])
             let mapPosition = marker.position.convertFromMeterToLatLng(converter: self.mapRepository.mapData.converter)
             var feature = Feature(geometry: .point(Point(mapPosition)))
 
@@ -240,6 +272,12 @@ class MarkerController: IMarkerController {
           switch result {
           case .success(var feature):
             feature.properties?[PROP_VISIBLE] = .boolean(isStartLocationsVisible)
+            if let prop = feature.properties?[PROP_ICON]??.string {
+              print("PROP", prop)
+              feature.properties?[PROP_ICON_START_LOCATION] = .string(prop)
+              feature.properties?.removeValue(forKey: PROP_ICON)
+            }
+            print("PROPS", feature.properties)
             startLocationFeatures[mapMark.id] = feature
           case .failure(_): break
           }
@@ -253,11 +291,11 @@ class MarkerController: IMarkerController {
         case .success(let features):
           features.forEach { feature in
             guard
-              feature.source == self.SOURCE_ID,
-              let id = feature.feature.properties?[self.PROP_ID]??.rawValue as? String,
+              feature.queriedFeature.source == self.SOURCE_ID,
+              let id = feature.queriedFeature.feature.properties?[self.PROP_ID]??.rawValue as? String,
               let marker = self.markers[id]
             else {
-              let id = feature.feature.properties?[self.PROP_ID]??.rawValue as? String
+              let id = feature.queriedFeature.feature.properties?[self.PROP_ID]??.rawValue as? String
               print("Marker not found", id)
               if let id = id {
                 print("Marker", id, self.markers[id]?.id)
@@ -374,10 +412,12 @@ extension MarkerController {
     func onStyleUpdated() {
         initSources()
 
-        try? mapRepository.style.addSource(markerSource, id: SOURCE_ID)
-        try? mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.below("puck"))
-        try? mapRepository.style.addLayer(markerLayer, layerPosition: LayerPosition.default)
-        try? mapRepository.style.addLayer(focusedMarkerLayer, layerPosition: LayerPosition.below("puck"))
-        try? mapRepository.style.addLayer(focusedMarkerLayer, layerPosition: LayerPosition.default)
+        try? mapRepository.map.addSource(markerSource)
+        try? mapRepository.map.addLayer(startMarkerLayer, layerPosition: LayerPosition.below("puck"))
+        try? mapRepository.map.addLayer(startMarkerLayer, layerPosition: LayerPosition.default)
+        try? mapRepository.map.addLayer(markerLayer, layerPosition: LayerPosition.below("puck"))
+        try? mapRepository.map.addLayer(markerLayer, layerPosition: LayerPosition.default)
+        try? mapRepository.map.addLayer(focusedMarkerLayer, layerPosition: LayerPosition.below("puck"))
+        try? mapRepository.map.addLayer(focusedMarkerLayer, layerPosition: LayerPosition.default)
     }
 }

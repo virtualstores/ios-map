@@ -15,11 +15,11 @@ public class TT2MapView: UIView {
     var mapStyle: VSFoundation.MapOptions.MapStyle?
     
     public func setup(with token: String) {
-        let myResourceOptions = ResourceOptions(accessToken: token)
+        MapboxOptions.accessToken = token
         let cameraOptions = CameraOptions(center: CLLocationCoordinate2D(latitude: 0, longitude: 0), zoom: 6.5, pitch: 0.0)
         
-        let myMapInitOptions = MapInitOptions(resourceOptions: myResourceOptions, cameraOptions: cameraOptions)
-        
+        let myMapInitOptions = MapInitOptions(/*resourceOptions: myResourceOptions,*/ cameraOptions: cameraOptions)
+
         mapView = MapView(frame: self.bounds, mapInitOptions: myMapInitOptions)
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         insertSubview(mapView, at: 0)
@@ -74,18 +74,12 @@ public class TT2MapView: UIView {
 
         switch mapStyle?.styleMode {
         case .light:
-            if #available(iOS 13.0, *) {
-                loadingView.backgroundColor = .secondarySystemBackground
-                loadingIndicator.style = .large
-            } else {
-                loadingView.backgroundColor = .lightGray
-            }
+            loadingView.backgroundColor = .secondarySystemBackground
+            loadingIndicator.style = .large
         case .dark:
             loadingView.backgroundColor = UIColor(rgb: 0x444444)
             loadingIndicator.color = .lightGray
-            if #available(iOS 13.0, *) {
-                loadingIndicator.style = .large
-            }
+            loadingIndicator.style = .large
         case .none: break
         }
 
@@ -96,6 +90,7 @@ public class TT2MapView: UIView {
     }
 
     func dismissLoadingScreen() {
+        guard loadingView?.superview != nil else { return }
         UIView.animate(withDuration: 0.5, animations: {
             self.loadingView?.alpha = 0.0
             self.loadingIndicator?.alpha = 0.0

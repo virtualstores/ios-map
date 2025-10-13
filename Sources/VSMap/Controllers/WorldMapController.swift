@@ -5,12 +5,13 @@
 //  Created by Théodore Roos on 2023-11-21.
 //
 
-import Foundation
 import CoreLocation
 import CoreGraphics
+import Combine
+import Foundation
+import UIKit
 import VSFoundation
 import MapboxMaps
-import Combine
 
 public class WorldMapController: IMapController {
   public var id: String { UUID().uuidString.uppercased() }
@@ -123,15 +124,14 @@ public class WorldMapController: IMapController {
       mapViewContainer.mapStyle = mapRepository.mapOptions.mapStyle
       mapViewContainer.addLoadingView()
       mapRepository.map = mapView.mapboxMap
-      mapView.mapboxMap.loadStyleURI(.satellite) { [weak self] result in
-        switch result {
-        case .success(let style):
-          DispatchQueue.main.async {
-            self?.onStyleLoaded(style: style)
-          }
-        case let .failure(error):
+      mapView.mapboxMap.loadStyle(.satellite) { [weak self] (error) in
+        if let error = error {
           Logger(verbosity: .error).log(message: "The map failed to load the style: \(error.localizedDescription)")
           self?.mapDataLoadedPublisher.send(completion: .failure(.loadingFailed))
+        } else {
+          DispatchQueue.main.async {
+            self?.onStyleLoaded()
+          }
         }
       }
     }
@@ -144,10 +144,8 @@ public class WorldMapController: IMapController {
     }
   }
 
-  private func onStyleLoaded(style: Style) {
+  private func onStyleLoaded() {
     internalLocation = LocationController(coordinateConverter: mapRepository.mapData.converter, mapOptions: mapRepository.mapOptions)
-
-    mapRepository.style = style
 
     setupCamera(with: .free)
     markerController.onStyleUpdated()
@@ -157,12 +155,11 @@ public class WorldMapController: IMapController {
     mlPositionController.onStyleUpdated()
     offlineController.onStyleUpdated()
 
-    mapView.location.overrideLocationProvider(with: locationController)
-    mapView.location.locationProvider.startUpdatingLocation()
-    mapView.location.locationProvider.startUpdatingHeading()
-    mapView.location.options.activityType = .other
+    mapView.location.override(provider: locationController)
     mapView.location.options.puckBearing = .heading
-    mapView.location.addLocationConsumer(newConsumer: self)
+    // TODO: Sink for location
+    //mapView.location.addLocationConsumer(newConsumer: self)
+
 
     mapView.ornaments.compassView.isHidden = true
     mapView.ornaments.scaleBarView.isHidden = true
@@ -231,7 +228,8 @@ public class WorldMapController: IMapController {
     if let controller = cameraController {
       controller.updateCameraMode(with: mode)
       controller.resetCameraMode()
-      mapView.location.addLocationConsumer(newConsumer: controller)
+      // TODO: Send location to camera controller
+      //mapView.location.addLocationConsumer(newConsumer: controller)
       mapView.gestures.delegate = cameraController
     }
   }
@@ -350,10 +348,12 @@ public class WorldMapController: IMapController {
   }
 
   public func visitScore(_ score: Int) {}
+  public func onForceSync() {}
 }
 
-extension WorldMapController: LocationConsumer {
-  public func locationUpdate(newLocation: MapboxMaps.Location) {
-    lastLocationPublisher.send(newLocation)
-  }
-}
+// TODO: Sink on location
+//extension WorldMapController: LocationConsumer {
+//  public func locationUpdate(newLocation: MapboxMaps.Location) {
+//    lastLocationPublisher.send(newLocation)
+//  }
+//}
