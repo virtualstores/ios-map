@@ -46,7 +46,6 @@ class BaseMapStateMachine {
   private var cancellable = Set<AnyCancellable>()
 
   init() {
-    Logger(verbosity: .info).log(tag: tag, message: "init")
     states = [
       .pending: MapControllerStatePending(stateMachine: self),
       .locationKnown: MapControllerStateLocationKnown(stateMachine: self),

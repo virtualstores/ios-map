@@ -273,11 +273,9 @@ class MarkerController: IMarkerController {
           case .success(var feature):
             feature.properties?[PROP_VISIBLE] = .boolean(isStartLocationsVisible)
             if let prop = feature.properties?[PROP_ICON]??.string {
-              print("PROP", prop)
               feature.properties?[PROP_ICON_START_LOCATION] = .string(prop)
               feature.properties?.removeValue(forKey: PROP_ICON)
             }
-            print("PROPS", feature.properties)
             startLocationFeatures[mapMark.id] = feature
           case .failure(_): break
           }

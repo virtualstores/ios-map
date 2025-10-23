@@ -76,10 +76,6 @@ public class MapRepository: Disposable {
         }
     }
 
-  init() {
-    Logger(verbosity: .info).log(tag: tag, message: "init")
-  }
-
   deinit {
     Logger(verbosity: .info).log(tag: tag, message: "deinit")
     dispose()
