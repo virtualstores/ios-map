@@ -82,6 +82,7 @@ public class BaseMapController {
   public func setup(pathfinder: IPathfinder?, zones: [Zone], sharedProperties: SharedZoneProperties?, shelves: [ShelfGroup], changedFloor: Bool = false) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
+      mapRepository.zones = zones
       if changedFloor {
         markerController.onFloorChange(mapRepository: mapRepository)
         pathfinderController.onFloorChange(mapRepository: mapRepository)
@@ -100,7 +101,7 @@ public class BaseMapController {
       guard let self = self else { return }
       mapRepository.mapData = mapData
 
-      guard let style = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: style) else { return }
+      guard let url = mapData.rtlsOptions.mapBoxUrl, let styleURI = StyleURI(rawValue: url) else { return }
       mapViewContainer.mapStyle = mapRepository.mapOptions.mapStyle
       mapViewContainer.addLoadingView()
       mapRepository.map = mapView.mapboxMap

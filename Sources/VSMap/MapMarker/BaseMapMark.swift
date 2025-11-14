@@ -20,9 +20,11 @@ public class BaseMapMark: MapMark {
   public let clusterable: Bool
   public let defaultVisibility: Bool
   public let focused: Bool
+  public let zoneId: String?
 
   public let type: MapMarkType
   public var itemPosition: ItemPosition?
+  public var zonePosition: ZonePosition?
   public var scale: Double = 1.0
   public var alpha: Double = 1.0
   public var backgroundColor: UIColor?
@@ -43,6 +45,7 @@ public class BaseMapMark: MapMark {
     clusterable: Bool,
     defaultVisibility: Bool,
     focused: Bool,
+    zoneId: String? = nil,
     type: MapMarkType
   ) {
     self.id = id
@@ -54,6 +57,7 @@ public class BaseMapMark: MapMark {
     self.clusterable = clusterable
     self.defaultVisibility = defaultVisibility
     self.focused = focused
+    self.zoneId = zoneId
     self.type = type
   }
 
@@ -77,6 +81,31 @@ public class BaseMapMark: MapMark {
     self.clusterable = clusterable
     self.defaultVisibility = defaultVisibility
     self.focused = focused
+    self.zoneId = nil
+    self.type = type
+  }
+
+  public init(
+    id: String,
+    zonePosition: ZonePosition,
+    triggerRadius: Double? = nil,
+    data: Any? = nil,
+    clusterable: Bool,
+    defaultVisibility: Bool,
+    focused: Bool,
+    type: MapMarkType
+  ) {
+    self.id = id
+    self.position = zonePosition.point
+    self.offset = .zero
+    self.floorLevelId = zonePosition.floorLevelId
+    self.zonePosition = zonePosition
+    self.triggerRadius = triggerRadius
+    self.data = data
+    self.clusterable = clusterable
+    self.defaultVisibility = defaultVisibility
+    self.focused = focused
+    self.zoneId = zonePosition.id
     self.type = type
   }
 

@@ -30,6 +30,7 @@ class ZoneController {
   private let PROP_ZONE_TEXT_COLOR_SELECTED = "prop-zone-text-color-selected"
   private let PROP_ZONE_TEXT_SIZE = "prop-zone-text-size"
   private let PROP_ZONE_TEXT_OPACITY = "prop-zone-text-opacity"
+  private let PROP_ZONE_TEXT_OPACITY_SELECTED = "prop-zone-text-opacity-selected"
   private let PROP_ZONE_TEXT_ALLOW_OVERLAP = "prop-zone-text-allow-overlap"
   private let PROP_ZONE_TEXT_IGNORE_PLACEMENT = "prop-zone-text-ignore-placement"
   private let PROP_ZONE_TEXT_ANCHOR = "prop-zone-text-anchor"
@@ -37,10 +38,12 @@ class ZoneController {
   private let PROP_ZONE_FILL_COLOR = "prop-zone-fill-color"
   private let PROP_ZONE_FILL_COLOR_SELECTED = "prop-zone-fill-color-selected"
   private let PROP_ZONE_FILL_ALPHA = "prop-zone-fill-alpha"
+  private let PROP_ZONE_FILL_ALPHA_SELECTED = "prop-zone-fill-alpha-selected"
 
   private let PROP_ZONE_LINE_COLOR = "prop-zone-line-color"
   private let PROP_ZONE_LINE_COLOR_SELECTED = "prop-zone-line-color-selected"
   private let PROP_ZONE_LINE_OPACITY = "prop-zone-line-opacity"
+  private let PROP_ZONE_LINE_OPACITY_SELECTED = "prop-zone-line-opacity-selected"
   private let PROP_ZONE_LINE_WIDTH = "prop-zone-line-width"
   private let PROP_ZONE_LINE_WIDTH_SCALED = "prop-zone-line-width-scaled"
 
@@ -119,6 +122,7 @@ class ZoneController {
         let textColorSelected = zone.navigationPointProperties?.textColorSelected ?? zone.properties.textColorSelected ?? sharedProperties?.textColorSelected ?? textStyle.textColorSelected.asHex
         let textSize = zone.navigationPointProperties?.textSize ?? zone.properties.textSize ?? sharedProperties?.textSize ?? textStyle.textMaxSize
         let textOpacity = zone.navigationPointProperties?.textOpacity ?? zone.properties.textOpacity ?? sharedProperties?.textOpacity ?? textStyle.textOpacity
+        let textOpacitySelected = zone.navigationPointProperties?.textOpacitySelected ?? zone.properties.textOpacitySelected ?? sharedProperties?.textOpacitySelected ?? textStyle.textOpacitySelected
         let textAllowOverlap = zone.navigationPointProperties?.textAllowOverLap ?? zone.properties.textAllowOverLap ?? sharedProperties?.textAllowOverLap ?? textStyle.textAllowOverLap
         let textAnchor = zone.navigationPointProperties?.textAnchor ?? zone.properties.textAnchor ?? sharedProperties?.textAnchor ?? textStyle.textAnchor
         let textIgnorePlacement = zone.navigationPointProperties?.textIgnorePlacement ?? zone.properties.textIgnorePlacement ?? sharedProperties?.textIgnorePlacement ?? textStyle.textIgnorePlacement
@@ -133,6 +137,7 @@ class ZoneController {
         textFeature.properties?[PROP_ZONE_TEXT_COLOR_SELECTED] = .string(textColorSelected)
         textFeature.properties?[PROP_ZONE_TEXT_SIZE] = .number(textSize)
         textFeature.properties?[PROP_ZONE_TEXT_OPACITY] = .number(textOpacity)
+        textFeature.properties?[PROP_ZONE_TEXT_OPACITY_SELECTED] = .number(textOpacitySelected)
         textFeature.properties?[PROP_ZONE_TEXT_ALLOW_OVERLAP] = .boolean(textAllowOverlap)
         textFeature.properties?[PROP_ZONE_TEXT_IGNORE_PLACEMENT] = .boolean(textIgnorePlacement)
         textFeature.properties?[PROP_ZONE_TEXT_ANCHOR] = .string(textAnchor)
@@ -143,6 +148,7 @@ class ZoneController {
       let fillColor = zone.properties.fillColor ?? sharedProperties?.fillColor ?? zoneStyle.fillStyle.color.asHex
       let fillColorSelected = zone.properties.fillColorSelected ?? sharedProperties?.fillColorSelected ?? zoneStyle.fillStyle.colorSelected.asHex
       let fillAlpha = zone.properties.fillAlpha ?? sharedProperties?.fillAlpha ?? zoneStyle.fillStyle.alpha
+      let fillAlphaSelected = zone.properties.fillAlphaSelected ?? sharedProperties?.fillAlphaSelected ?? zoneStyle.fillStyle.alphaSelected
 
       var fillFeature = Feature(geometry: .polygon(Polygon([polygon])))
       fillFeature.properties = JSONObject()
@@ -154,12 +160,14 @@ class ZoneController {
       fillFeature.properties?[PROP_ZONE_FILL_COLOR] = .string(fillColor)
       fillFeature.properties?[PROP_ZONE_FILL_COLOR_SELECTED] = .string(fillColorSelected)
       fillFeature.properties?[PROP_ZONE_FILL_ALPHA] = .number(fillAlpha)
+      fillFeature.properties?[PROP_ZONE_FILL_ALPHA_SELECTED] = .number(fillAlphaSelected)
 
       self.zoneFillFeatures[zone.id] = fillFeature
 
       let lineColor = zone.properties.lineColor ?? sharedProperties?.lineColor ?? zoneStyle.lineStyle.lineColor.asHex
       let lineColorSelected = zone.properties.lineColorSelected ?? sharedProperties?.lineColorSelected ?? zoneStyle.lineStyle.lineColorSelected.asHex
       let lineOpacity = zone.properties.lineOpacity ?? sharedProperties?.lineOpacity ?? zoneStyle.lineStyle.lineOpacity
+      let lineOpacitySelected = zone.properties.lineOpacitySelected ?? sharedProperties?.lineOpacitySelected ?? zoneStyle.lineStyle.lineOpacitySelected
       let lineWidth = zone.properties.lineWidth ?? sharedProperties?.lineWidth ?? zoneStyle.lineStyle.lineWidth
 
       var lineFeature = Feature(geometry: .polygon(Polygon([polygon])))
@@ -172,6 +180,7 @@ class ZoneController {
       lineFeature.properties?[PROP_ZONE_LINE_COLOR] = .string(lineColor)
       lineFeature.properties?[PROP_ZONE_LINE_COLOR_SELECTED] = .string(lineColorSelected)
       lineFeature.properties?[PROP_ZONE_LINE_OPACITY] = .number(lineOpacity)
+      lineFeature.properties?[PROP_ZONE_LINE_OPACITY_SELECTED] = .number(lineOpacitySelected)
       lineFeature.properties?[PROP_ZONE_LINE_WIDTH] = .number(lineWidth)
       lineFeature.properties?[PROP_ZONE_LINE_WIDTH_SCALED] = .number(lineWidth * 5)
       self.zoneLineFeatures[zone.id] = lineFeature
@@ -213,7 +222,13 @@ class ZoneController {
         Exp(.get) { PROP_ZONE_TEXT_COLOR }
       }
     )
-    _zoneTextLayer?.textOpacity = .expression(Exp(.get) { PROP_ZONE_TEXT_OPACITY })
+    _zoneTextLayer?.textOpacity = .expression(
+      Exp(.switchCase) {
+        Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }
+        Exp(.get) { PROP_ZONE_TEXT_OPACITY_SELECTED }
+        Exp(.get) { PROP_ZONE_TEXT_OPACITY }
+      }
+    )
 //    _zoneTextLayer?.textIgnorePlacement = .expression(Exp(.get) { PROP_ZONE_TEXT_IGNORE_PLACEMENT })
     _zoneTextLayer?.textAnchor = .expression(Exp(.get) { PROP_ZONE_TEXT_ANCHOR })
     _zoneTextLayer?.textOffset = .constant(zoneStyle.textStyle.textOffset)
@@ -230,7 +245,13 @@ class ZoneController {
         Exp(.get) { PROP_ZONE_FILL_COLOR }
       }
     )
-    _zoneFillLayer?.fillOpacity = .expression(Exp(.get) { PROP_ZONE_FILL_ALPHA })
+    _zoneFillLayer?.fillOpacity = .expression(
+      Exp(.switchCase) {
+        Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }
+        Exp(.get) { PROP_ZONE_FILL_ALPHA_SELECTED }
+        Exp(.get) { PROP_ZONE_FILL_ALPHA }
+      }
+    )
     _zoneFillLayer?.filter = Exp(.eq) { Exp(.get) { PROP_ZONE_VISIBLE }; true }
 
     _zoneLineLayer = LineLayer(id: LAYER_ZONE_LINE, source: zoneLineSource.id)
@@ -244,7 +265,13 @@ class ZoneController {
     )
     _zoneLineLayer?.lineCap = .constant(.round)
     _zoneLineLayer?.lineJoin = .constant(.round)
-    _zoneLineLayer?.lineOpacity = .expression(Exp(.get) { PROP_ZONE_LINE_OPACITY })
+    _zoneLineLayer?.lineOpacity = .expression(
+      Exp(.switchCase) {
+        Exp(.eq) { Exp(.get) { PROP_SELECTED }; true }
+        Exp(.get) { PROP_ZONE_LINE_OPACITY_SELECTED }
+        Exp(.get) { PROP_ZONE_LINE_OPACITY }
+      }
+    )
     _zoneLineLayer?.lineWidth = .expression(
       Exp(.interpolate) {
         Exp(.exponential) { 1.75 }
@@ -351,32 +378,32 @@ extension ZoneController: IZoneController {
     refreshZones()
   }
 
-  func show(zone: Zone) {
-    showZone(zone)
+  func show(zoneId: String) {
+    showZone(zoneId)
     refreshZones()
   }
 
-  func hide(zone: Zone) {
-    hideZone(zone)
+  func hide(zoneId: String) {
+    hideZone(zoneId)
     refreshZones()
   }
 
-  func select(zone: Zone) {
-    selectZone(zone)
+  func select(zoneId: String) {
+    selectZone(zoneId)
     refreshZones()
   }
 
-  func select(zones: [Zone]) {
+  func select(zoneIds: [String]) {
     zones.forEach { selectZone($0) }
     refreshZones()
   }
 
-  func deselect(zone: Zone) {
-    deselectZone(zone)
+  func deselect(zoneId: String) {
+    deselectZone(zoneId)
     refreshZones()
   }
 
-  func deselect(zones: [Zone]) {
+  func deselect(zoneIds: [String]) {
     zones.forEach { deselectZone($0) }
     refreshZones()
   }
@@ -419,15 +446,27 @@ private extension ZoneController {
     zoneLineFeatures[zone.id]?.properties?[PROP_SELECTED] = .boolean(false)
   }
 
-  func showZone(zoneId: String) {
+  func showZone(_ zoneId: String) {
 //    zoneTextFeatures[zoneId]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
     zoneFillFeatures[zoneId]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
     zoneLineFeatures[zoneId]?.properties?[PROP_ZONE_VISIBLE] = .boolean(true)
   }
 
-  func hideZone(zoneId: String) {
+  func hideZone(_ zoneId: String) {
 //    zoneTextFeatures[zoneId]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
     zoneFillFeatures[zoneId]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
     zoneLineFeatures[zoneId]?.properties?[PROP_ZONE_VISIBLE] = .boolean(false)
+  }
+
+  func selectZone(_ zoneId: String) {
+    zoneTextFeatures[zoneId]?.properties?[PROP_SELECTED] = .boolean(true)
+    zoneFillFeatures[zoneId]?.properties?[PROP_SELECTED] = .boolean(true)
+    zoneLineFeatures[zoneId]?.properties?[PROP_SELECTED] = .boolean(true)
+  }
+
+  func deselectZone(_ zoneId: String) {
+    zoneTextFeatures[zoneId]?.properties?[PROP_SELECTED] = .boolean(false)
+    zoneFillFeatures[zoneId]?.properties?[PROP_SELECTED] = .boolean(false)
+    zoneLineFeatures[zoneId]?.properties?[PROP_SELECTED] = .boolean(false)
   }
 }
