@@ -60,6 +60,7 @@ public class MapRepository: Disposable {
     var currentPosition: VPSOutputSignal.Position?
     var isPositionActive = false
     var isReferenceAngleCertain = false
+    var zones: [Zone] = []
 
     var floorLevelId: Int64 { mapData.rtlsOptions.id }
     
@@ -91,5 +92,6 @@ public class MapRepository: Disposable {
     currentPosition = nil
     isPositionActive = false
     isReferenceAngleCertain = false
+    zones.removeAll()
   }
 }

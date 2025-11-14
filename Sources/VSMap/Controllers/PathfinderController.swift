@@ -92,7 +92,6 @@ class PathfinderController: Disposable {
     }
   }
 
-//  var style: Style { mapRepository.style }
   var converter: ICoordinateConverter { mapRepository.mapData.converter }
   var mapOptions: VSFoundation.MapOptions { mapRepository.mapOptions }
   var pathfindingStyle: VSFoundation.MapOptions.PathfindingStyle { mapOptions.pathfindingStyle }
@@ -216,19 +215,25 @@ class PathfinderController: Disposable {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       guard !allGoals.isEmpty else {
-        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .geometry(.lineString(LineString([]))))
-        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .geometry(.lineString(LineString([]))))
-        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .geometry(.lineString(LineString([]))))
-        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .geometry(.point(Point(CLLocationCoordinate2D(latitude: 0, longitude: 0)))))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_HEAD, geoJSON: .featureCollection(.init(features: [])))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_BODY, geoJSON: .featureCollection(.init(features: [])))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_TAIL, geoJSON: .featureCollection(.init(features: [])))
+        mapRepository.map.updateGeoJSONSource(withId: SOURCE_ID_END, geoJSON: .featureCollection(.init(features: [])))
         return
       }
 
       latestRefreshLines = Date()
       if head {
         var path = slice(path: currentHeadPath, coordinate: currentCoordinate) ?? currentHeadPath
-        if path.count > 4 {
-          path.removeLast(4)
+        if let currentGoal = pathfinder?.currentGoal, let goal = allGoals[currentGoal.id], let zone = mapRepository.zones.first(where: { $0.id == goal.zoneId }) {
+          path = path
+            .map { $0.fromLatLngToMeter(converter: self.converter) }
+            .filter { !zone.contains(point: $0) }
+            .map { $0.convertFromMeterToLatLng(converter: self.converter) }
         }
+//        if path.count > 4 {
+//          path.removeLast(4)
+//        }
         //if let distance = distance(in: path) {
         //  print("DISTANCE", currentCoordinate?.fromLatLngToMeter(converter: converter).distance(to: path.last!.fromLatLngToMeter(converter: converter)), distance)
         //}
@@ -499,6 +504,6 @@ extension PathfinderController: IPathfinderController {
 
 extension SwapLocation.Point {
   func asGoal(floorLevelId: Int64) -> PathfindingGoal {
-    PathfindingGoal(id: "SwapLocation-\(name ?? "")", position: coordinate, data: self, type: .target, floorLevelId: floorLevelId)
+    PathfindingGoal(id: "SwapLocation-\(name ?? "Undefined")", position: coordinate, data: self, type: .target, floorLevelId: floorLevelId)
   }
 }
