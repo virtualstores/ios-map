@@ -250,10 +250,10 @@ class MarkerController: IMarkerController {
     guard let image = UIImage(systemName: "qrcode.viewfinder")?.withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
     startLocationFeatures.removeAll()
     mapRepository.mapData.rtlsOptions.scanLocations?
-      .sorted(by: { $0.code < $1.code })
+      .filter { $0.type == .start }
       .map({
         let marker = BaseMapMark(
-          id: "TT2" + $0.code,
+          id: "TT2-StartLocations-" + $0.code,
           itemPosition: ItemPosition(point: $0.point, offset: .zero, floorLevelId: mapRepository.floorLevelId),
           data: $0,
           clusterable: false,
