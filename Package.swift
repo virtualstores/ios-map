@@ -17,7 +17,7 @@ let package = Package(
             targets: ["VSMap"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/virtualstores/ios-foundation.git", .exact("1.12.0")),
+        .package(url: "https://github.com/virtualstores/ios-foundation.git", .exact("1.12.1")),
         .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", .exact("11.15.2")),
     ],
     targets: [
