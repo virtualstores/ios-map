@@ -396,8 +396,13 @@ extension PathfinderController: IPathfinderController {
     goals.forEach { goal in
       guard let floorLevelId = goal.floorLevelId else { return }
       if floorLevelId != mapRepository.floorLevelId {
-        guard let swapLocation = mapRepository.swapLocations[self.floorLevelId]?.first, let name = swapLocation.name, filteredGoals.contains(where: { $0.id.contains(name) }) else { return }
-        filteredGoals.append(swapLocation.point.asGoal(floorLevelId: self.floorLevelId))
+        guard
+          let swapLocation = mapRepository.swapLocations[self.floorLevelId]?.first,
+          let name = swapLocation.name,
+          let point = swapLocation.point?.asGoal(floorLevelId: self.floorLevelId),
+          filteredGoals.contains(where: { $0.id.contains(name) })
+        else { return }
+        filteredGoals.append(point)
       }
     }
 
