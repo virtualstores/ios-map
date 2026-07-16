@@ -166,7 +166,7 @@ class MarkerController: IMarkerController {
         //    ]
         //  }
         //)
-        _startLocationMarkerLayer?.iconAllowOverlap = .constant(false)
+        _startLocationMarkerLayer?.iconAllowOverlap = .constant(true)
         _startLocationMarkerLayer?.iconOpacity = .expression(Exp(.get) { PROP_TRANSPARENCY })
         _startLocationMarkerLayer?.visibility = .constant(.visible)
         _startLocationMarkerLayer?.filter = Exp(.eq) { Exp(.get) { PROP_FOCUSED }; false }
@@ -251,6 +251,7 @@ class MarkerController: IMarkerController {
     startLocationFeatures.removeAll()
     mapRepository.mapData.rtlsOptions.scanLocations?
       .filter { $0.type == .start }
+      //.filter { !$0.isRouteLocation }
       .map({
         let marker = BaseMapMark(
           id: "TT2-StartLocations-" + $0.code,
