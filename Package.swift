@@ -12,12 +12,10 @@ let package = Package(
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
-        .library(
-            name: "VSMap",
-            targets: ["VSMap"]),
+        .library(name: "VSMap", targets: ["VSMap"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/virtualstores/ios-foundation.git", .exact("1.13.0")),
+        .package(url: "https://github.com/virtualstores/ios-foundation.git", .exact("1.14.0")),
         .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", .exact("11.15.2")),
     ],
     targets: [
